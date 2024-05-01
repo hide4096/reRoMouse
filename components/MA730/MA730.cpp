@@ -5,15 +5,14 @@ MA730::MA730(spi_host_device_t bus, gpio_num_t cs)
     // SPIデバイスの設定
     memset(&dev_enc, 0, sizeof(dev_enc));
     dev_enc.clock_speed_hz = 25 * 1000 * 1000; // Max 25MHz
-    // dev_enc.mode = 1;                        // Mode 0 CPOL=0 CPHA=0, Mode 3 CPOL=1 CPHA=1    要らないかもしれない
+    dev_enc.mode = 1;
     dev_enc.spics_io_num = cs;
     dev_enc.queue_size = 1;
-    // dev_enc.cs_ena_pretrans = 4;    // 送信前に cs がアクティブになる SPI ビットサイクルの量（0-16）。半二重トランザクションでのみ動作する  多分要らない
 
     err = spi_bus_add_device(bus, &dev_enc, &_spi);
     ESP_ERROR_CHECK(err);
 
-    printf("encoder init\n");
+    ESP_LOGI("MA730", "CS:%d Initialized", cs);
 }
 
 MA730::~MA730() {}

@@ -81,14 +81,16 @@ extern "C" void app_main(void)
     float t = 0.0;
     while (1)
     {
-        /*h = imu.accelZ() * 360;
+        h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();
 
+        /*
         motor.setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
         t = t + 0.01;
         if (t > 2 * M_PI)
-            t = 0.0;*/
+            t = 0.0;
+        */
         
         h = EncL.readAngle();
         h1 = EncR.readAngle();
@@ -102,6 +104,6 @@ extern "C" void app_main(void)
         //printf("L:%ld    R:%ld\n", h, h1);
         //printf("L:%f    R:%f\n", WheelAngle_L, WheelAngle_R);
         printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }

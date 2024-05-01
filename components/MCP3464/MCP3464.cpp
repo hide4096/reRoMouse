@@ -16,7 +16,7 @@ MCP3464::MCP3464(spi_host_device_t bus, gpio_num_t cs){
 
     vTaskDelay(pdTICKS_TO_MS(1));
 
-    uint8_t reserved_reg = 0b01 << 6 | 0xE << 2 | 0b01;
+    uint8_t reserved_reg = 0b01 << 6 | 0xF << 2 | 0b01;
     uint16_t device_id = read(reserved_reg);
 }
 

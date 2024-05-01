@@ -6,6 +6,7 @@
 #include "sdkconfig.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
+#include "esp_log.h"
 #include <cstring>
 
 #define READ_COMMAND 0b010
