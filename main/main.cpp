@@ -9,6 +9,7 @@
 #include "Buzzer.hpp"
 #include "Motor.hpp"
 #include "MA730.hpp"
+#include "MCP3464.hpp"
 
 extern "C" void app_main(void)
 {
@@ -20,11 +21,10 @@ extern "C" void app_main(void)
     bus_imu_adc.sclk_io_num = GPIO_NUM_4;
     bus_imu_adc.quadwp_io_num = -1;
     bus_imu_adc.quadhd_io_num = -1;
-    bus_imu_adc.max_transfer_sz = 16;
-    bus_imu_adc.intr_flags = 0;
 
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_imu_adc, SPI_DMA_CH_AUTO));
 
+    MCP3464 adc(SPI2_HOST, GPIO_NUM_5);
     MPU6500 imu(SPI2_HOST, GPIO_NUM_14);
 
     // Encoder SPIバスの設定

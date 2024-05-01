@@ -136,7 +136,7 @@ void Motor::setMotorSpeed(float spdR, float spdL)
     if(dutyR > BDC_MCPWM_DUTY_TICK_MAX) dutyR = BDC_MCPWM_DUTY_TICK_MAX;
     if(dutyL > BDC_MCPWM_DUTY_TICK_MAX) dutyL = BDC_MCPWM_DUTY_TICK_MAX;
 
-    ESP_LOGI("Motor", "dutyR: %ld, dutyL: %ld", dutyR, dutyL);
+    ESP_LOGD("Motor", "dutyR: %ld, dutyL: %ld", dutyR, dutyL);
 
     esp_err_t MCPWM_ERROR_R = mcpwm_comparator_set_compare_value(comparator_r, dutyR);
     esp_err_t MCPWM_ERROR_L = mcpwm_comparator_set_compare_value(comparator_l, dutyL);
