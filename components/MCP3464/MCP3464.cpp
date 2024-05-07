@@ -11,7 +11,9 @@ MCP3464::MCP3464(spi_host_device_t bus, gpio_num_t cs){
     err = spi_bus_add_device(bus, &dev_adc, &_spi);
     ESP_ERROR_CHECK(err);
 
-    uint8_t fullreset_reg = 0b01 << 6 | 0b1110 << 2 | 0b00;
+    vTaskDelay(1/portTICK_PERIOD_MS);
+    //uint8_t fullreset_reg = 0b01 << 6 | 0b1110 << 2 | 0b00;
+    uint8_t fullreset_reg = 0xE << 2 | ( 0x02 | (0x01 << 6));
     uint8_t ans = read(fullreset_reg);
 
     vTaskDelay(pdTICKS_TO_MS(1));
@@ -42,7 +44,7 @@ uint8_t MCP3464::read(uint8_t reg){
 
     memset(&cmd, 0, sizeof(cmd));
     cmd.flags = SPI_TRANS_USE_RXDATA | SPI_TRANS_USE_TXDATA;
-    cmd.length = 32;
+    cmd.length = 8;
     cmd.tx_data[0] = reg;
     err = spi_device_polling_transmit(_spi, &cmd);
     ESP_ERROR_CHECK(err);

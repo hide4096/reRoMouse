@@ -10,6 +10,7 @@
 #include "Motor.hpp"
 #include "MA730.hpp"
 #include "MCP3464.hpp"
+#include "structs.hpp"
 
 extern "C" void app_main(void)
 {
@@ -85,6 +86,7 @@ extern "C" void app_main(void)
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();
 
+        printf("Z:%ld\n", h);
         /*
         motor.setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
         t = t + 0.01;
@@ -92,7 +94,7 @@ extern "C" void app_main(void)
             t = 0.0;
         */
         
-        h = EncL.readAngle();
+        /*h = EncL.readAngle();
         h1 = EncR.readAngle();
 
         float WheelAngle_L = 2.0 * M_PI * h / 16384.0;
@@ -103,7 +105,7 @@ extern "C" void app_main(void)
 
         //printf("L:%ld    R:%ld\n", h, h1);
         //printf("L:%f    R:%f\n", WheelAngle_L, WheelAngle_R);
-        printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);
+        printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);*/
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
