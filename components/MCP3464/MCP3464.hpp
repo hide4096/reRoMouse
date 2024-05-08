@@ -9,14 +9,15 @@
 #include "esp_log.h"
 #include <cstring>
 #include <iostream>
+#include "sensor.hpp"
 
 
-class MCP3464
+class MCP3464 : public Sensor
 {
 public:
     MCP3464(spi_host_device_t bus, gpio_num_t cs);
     ~MCP3464();
-
+    void GetData(t_sens_data *_sens) override;
 private:
     spi_device_handle_t _spi;
     spi_bus_config_t bus_adc;
@@ -26,5 +27,7 @@ private:
     uint8_t read(uint8_t reg);
     uint16_t read16(uint8_t reg);
     void write(void* pData, uint8_t size);
+
+    t_sens_data *sens;
 };
 #endif

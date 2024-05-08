@@ -8,22 +8,23 @@
 #include "driver/spi_master.h"
 #include "esp_log.h"
 #include <cstring>
+#include "sensor.hpp"
 
 #define READ_COMMAND 0b010
 #define WRITE_COMMAND 0b100
-#define Rotation_direction 0b01001 // 回転方向逆転のアドレス　ここの7bit目を1にすると回転方向が逆になる
+#define Rotation_direction 0b01001 // 回転方向逆転のアドレス ここの7bit目を1にすると回転方向が逆になる
 #define RESOLUTION_MAX 16384
 #define RESORUTION_HALF 8192
 
 
 
-class MA730
+class MA730 : public Sensor
 {
     public:
     MA730(spi_host_device_t bus, gpio_num_t cs);
     ~MA730();
 
-    //void GetData(t_sens_data *_sens) override;
+    void GetData(t_sens_data *_sens) override;
     uint16_t readAngle();
     void ShowAngle();
 
@@ -40,7 +41,7 @@ private:
     spi_device_interface_config_t dev_enc;
     //gpio_num_t _cs;
     
-    //t_sens_data *sens;
+    t_sens_data *sens;
     
 };
 

@@ -71,3 +71,8 @@ uint16_t MCP3464::read16(uint8_t reg){
     return cmd.rx_data[1] << 8 | cmd.rx_data[2];
 
 }
+
+void MCP3464::GetData(t_sens_data *_sens)
+{
+    sens = _sens;
+}

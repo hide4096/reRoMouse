@@ -60,7 +60,7 @@ uint8_t MA730::WriteRegister(uint8_t address, uint8_t data)
     return read() >> 8;
 }
 
-/*void MA730::GetData(t_sens_data *_sens)
+void MA730::GetData(t_sens_data *_sens)
 {
     sens = _sens;
-}*/
+}
