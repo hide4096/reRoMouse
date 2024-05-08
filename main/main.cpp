@@ -8,8 +8,8 @@
 #include "PCA9632.hpp"
 #include "Buzzer.hpp"
 #include "Motor.hpp"
-#include "MA730.hpp"
 #include "MCP3464.hpp"
+#include "MA730.hpp"
 #include "structs.hpp"
 
 extern "C" void app_main(void)

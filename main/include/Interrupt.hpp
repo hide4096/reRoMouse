@@ -13,6 +13,8 @@
 #include "structs.hpp"
 #include "Base_func.hpp"
 
+#define ENC_MAX 16384
+#define ENC_HALF 8192
 
 class Interrupt : public Micromouse{
     public:

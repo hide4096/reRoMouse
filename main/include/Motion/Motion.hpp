@@ -5,7 +5,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>    // freertos以下のファイルをインクルードしたい場合、必ず先にFreeRTOS.hをインクルードする
 #include "../Base_func.hpp"
-#include "include/files.hpp"
+#include "files.hpp"
 
 class Motion : public Micromouse
 {
@@ -16,7 +16,7 @@ class Motion : public Micromouse
         void ptr_by_motion(t_mouse_motion_val *val) override;
         void ptr_by_control(t_control *control) override;
         void ptr_by_map(t_map *map) override;
-        void set_device(MCP3464 &_MCP3464, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) override;
+        void set_device(MCP3464 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) override;
         void GetSemphrHandle(SemaphoreHandle_t *_on_logging);
         void run();
         void run_half();
@@ -47,7 +47,7 @@ class Motion : public Micromouse
         t_map *map;
         SemaphoreHandle_t *on_logging;
 
-        MCP3464 *MCP3464;
+        MCP3464 *adc;
         MA730 *encR;
         MA730 *encL;
         BUZZER *buz;

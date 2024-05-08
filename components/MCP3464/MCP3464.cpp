@@ -76,3 +76,64 @@ void MCP3464::GetData(t_sens_data *_sens)
 {
     sens = _sens;
 }
+
+/*float MCP3464::BatteryVoltage()
+{
+    int _raw = 0;
+    ESP_ERROR_CHECK(adc_oneshot_read(adc1, VBATT_CHANNEL, &_raw));
+    return (float)((float)(_raw) * (2.2 / 1000.0));
+}
+
+void MCP3464::ReadSensor(int *sensors, uint8_t mask)
+{
+    if (mask & 1)
+        ESP_ERROR_CHECK(adc_oneshot_read(adc1, led_FL.channel, &sensors[0]));
+    if ((mask >> 1) & 1)
+        ESP_ERROR_CHECK(adc_oneshot_read(adc1, led_L.channel, &sensors[1]));
+    if ((mask >> 2) & 1)
+        ESP_ERROR_CHECK(adc_oneshot_read(adc1, led_R.channel, &sensors[2]));
+    if ((mask >> 3) & 1)
+        ESP_ERROR_CHECK(adc_oneshot_read(adc1, led_FR.channel, &sensors[3]));
+        
+}
+
+void MCP3464::SetIRLED(uint8_t led)
+{
+    gpio_set_level(led_FR.pin, led & 1);
+    gpio_set_level(led_R.pin, (led >> 1) & 1);
+    gpio_set_level(led_L.pin, (led >> 2) & 1);
+    gpio_set_level(led_FL.pin, (led >> 3) & 1);
+    
+}
+
+void MCP3464::WallSensor()
+{
+
+    ReadSensor(before, 0b1111); // 全消灯での値を取得
+
+    SetIRLED(0b1001);            // fl,fr点灯
+    ets_delay_us(300);           // 100us待つ
+    ReadSensor(sensors, 0b1001); // fl,fr点灯での値を取得
+
+    SetIRLED(0b0110);                   // l,r点灯
+    ets_delay_us(300);                  // 100us待つ
+    ReadSensor(sensors, 0b0110);        // l,r点灯での値を取得
+    SetIRLED(0b0000);                   // 全消灯
+    //vTaskDelay(1 / portTICK_PERIOD_MS); // 1ms待つ
+
+    sens->wall.val.fl = sensors[0] - before[0];
+    sens->wall.val.l = sensors[1] - before[1];
+    sens->wall.val.r = sensors[2] - before[2];
+    sens->wall.val.fr = sensors[3] - before[3];
+}*/
+
+
+void MCP3464::adc_loop()
+{
+    /*while (1)
+    {
+        WallSensor();
+        sens->BatteryVoltage = BatteryVoltage();
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }*/
+}
