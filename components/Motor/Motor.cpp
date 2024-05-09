@@ -113,11 +113,11 @@ void Motor::setMotorSpeed(float spdR, float spdL)
 
     if (spdR > 0)
     {
-        gpio_set_level(ph_pin_R, 1);
+        gpio_set_level(ph_pin_R, 0);
     }
     else
     {
-        gpio_set_level(ph_pin_R, 0);
+        gpio_set_level(ph_pin_R, 1);
         spdR = -spdR;
     }
     if (spdL > 0)

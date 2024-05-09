@@ -83,10 +83,9 @@ extern "C" void app_main(void)
     {
         h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
-        np.show();
-
+        np.show();  
         /*
-        motor.setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
+        motor.setMotorSpeed(0.0 * sin(t),0.7 * sin(t));
         t = t + 0.01;
         if (t > 2 * M_PI)
             t = 0.0;
