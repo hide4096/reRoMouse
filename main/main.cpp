@@ -11,6 +11,7 @@
 #include "MCP3464.hpp"
 #include "MA730.hpp"
 #include "structs.hpp"
+#include "micromouse.hpp"
 
 extern "C" void app_main(void)
 {
@@ -82,11 +83,12 @@ extern "C" void app_main(void)
     float t = 0.0;
     while (1)
     {
-        h = imu.accelZ() * 360;
+        MICROMOUSE(adc, EncR, EncL, buzzer, imu, led, motor);
+        /*h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();
 
-        printf("Z:%ld\n", h);
+        printf("Z:%ld\n", h);*/
         /*
         motor.setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
         t = t + 0.01;

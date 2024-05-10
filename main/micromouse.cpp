@@ -79,16 +79,16 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
 
     // センサ系
     //adc.GetData(&sens);
-    //imu.GetData(&sens);
-    //enc_R.GetData(&sens);
-    //enc_L.GetData(&sens);
+    imu.GetData(&sens);
+    enc_R.GetData(&sens);
+    enc_L.GetData(&sens);
 
     printf("finish sensor struct\n");
 
     /* パラメータの設定 */
-    pid_gain = read_file_pid();
-    wall_threshold = read_file_wall_th();
-    center_sens_val = read_file_center_sens_val();
+    //pid_gain = read_file_pid();
+    //wall_threshold = read_file_wall_th();
+    //center_sens_val = read_file_center_sens_val();
 
     // 距離
     val.tar.len = 0.09;
@@ -114,29 +114,46 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
     val.end.ang_vel = 0.0;
 
     // 速度制御
-    control.v.Kp = pid_gain.speed_Kp;
-    control.v.Ki = pid_gain.speed_Ki;
-    control.v.Kd = pid_gain.speed_Kd;
+    //control.v.Kp = pid_gain.speed_Kp;
+    //control.v.Ki = pid_gain.speed_Ki;
+    //control.v.Kd = pid_gain.speed_Kd;
+    control.v.Kp = 5.0;
+    control.v.Ki = 500.0;
+    control.v.Kd = 0.0;
 
     // 角速度制御
-    control.o.Kp = pid_gain.ang_vel_Kp;
-    control.o.Ki = pid_gain.ang_vel_Ki;
-    control.o.Kd = pid_gain.ang_vel_Kd;
+    //control.o.Kp = pid_gain.ang_vel_Kp;
+    //control.o.Ki = pid_gain.ang_vel_Ki;
+    //control.o.Kd = pid_gain.ang_vel_Kd;
+    control.o.Kp = 0.50;
+    control.o.Ki = 100.0;
+    control.o.Kd = 0.0;
 
     // 壁制御
-    control.wall.Kp = pid_gain.wall_Kp;
-    control.wall.Ki = pid_gain.wall_Ki;
-    control.wall.Kd = pid_gain.wall_Kd;
+    //control.wall.Kp = pid_gain.wall_Kp;
+    //control.wall.Ki = pid_gain.wall_Ki;
+    //control.wall.Kd = pid_gain.wall_Kd;
+    control.wall.Kp = 0.005;
+    control.wall.Ki = 0.0;
+    control.wall.Kd = 0.0;
 
     // 壁センサ閾値
-    sens.wall.th_wall.fl = wall_threshold.th_wall_fl;
-    sens.wall.th_wall.fr = wall_threshold.th_wall_fr;
-    sens.wall.th_wall.l = wall_threshold.th_wall_l;
-    sens.wall.th_wall.r = wall_threshold.th_wall_r;
-    sens.wall.th_control.l = wall_threshold.th_control_l;
-    sens.wall.th_control.r = wall_threshold.th_control_r;
-    sens.wall.ref.l = wall_threshold.ref_l;
-    sens.wall.ref.r = wall_threshold.ref_r;
+    //sens.wall.th_wall.fl = wall_threshold.th_wall_fl;
+    //sens.wall.th_wall.fr = wall_threshold.th_wall_fr;
+    //sens.wall.th_wall.l = wall_threshold.th_wall_l;
+    //sens.wall.th_wall.r = wall_threshold.th_wall_r;
+    //sens.wall.th_control.l = wall_threshold.th_control_l;
+    //sens.wall.th_control.r = wall_threshold.th_control_r;
+    //sens.wall.ref.l = wall_threshold.ref_l;
+    //sens.wall.ref.r = wall_threshold.ref_r;
+    sens.wall.th_wall.fl = 42;
+    sens.wall.th_wall.fr = 47;
+    sens.wall.th_wall.l = 42;
+    sens.wall.th_wall.r = 55;
+    sens.wall.th_control.l = 100;
+    sens.wall.th_control.r = 100;
+    sens.wall.ref.l = 141;
+    sens.wall.ref.r = 170;
 
     // ゴール座標
     map.GOAL_X = 4;
@@ -157,6 +174,7 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
     printf("Task execution statistics:\n%s", buffer);*/
 
     uint8_t mode = 0;
+    uint16_t time_count = 0;
     const int MODE_MAX = 0b1111;
     const int MODE_MIN = 0;
 
@@ -169,13 +187,21 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
         /*vTaskList(buffer);
         printf("Task execution statistics:\n%s", buffer);*/
 
-        if (sens.wall.val.fl + sens.wall.val.l + sens.wall.val.r + sens.wall.val.fr > 3000)
+        /*if (sens.wall.val.fl + sens.wall.val.l + sens.wall.val.r + sens.wall.val.fr > 3000)
         {
 
             led.set(0b1111);
             sens.gyro.ref = imu.surveybias(2000);
             mode_select(&mode, motion, &sens, &val, &control, &map);
             control.flag = FALSE;
+        }*/
+        if (time_count > 3000)
+        {
+            led.set(0b1111);
+            sens.gyro.ref = imu.surveybias(2000);
+            mode_select(&mode, motion, &sens, &val, &control, &map);
+            control.flag = FALSE;
+            time_count = 0;
         }
 
         if (val.current.vel > 0.04)
@@ -188,6 +214,7 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
             {
                 mode++;
             }
+            time_count = 0;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
         if (val.current.vel < -0.04)
@@ -200,6 +227,7 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
             {
                 mode--;
             }
+            time_count = 0;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
         //printf("time:%d\n", control.time_count);
@@ -207,6 +235,7 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
         //printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);
     }
     //vTaskDelay(pdMS_TO_TICKS(10));
