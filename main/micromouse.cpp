@@ -5,6 +5,7 @@
 #include "include/UI/test.hpp"
 #include "include/Motion/Adachi.hpp"
 #include "include/micromouse.hpp"
+#include "sens_structs.hpp"
 #include <functional>
 
 std::vector<std::shared_ptr<UI>> ui;
@@ -58,10 +59,12 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
     // 制御系
     Interrupt interrupt;
     interrupt.set_device(adc, enc_R, enc_L, buzzer, imu, led, motor);
+    printf("finish set device\n");
     interrupt.ptr_by_sensor(&sens);
     interrupt.ptr_by_motion(&val);
     interrupt.ptr_by_control(&control);
     interrupt.ptr_by_map(&map);
+    printf("finish pass pointer\n");
     interrupt.GetSemphrHandle(&on_logging);
 
     printf("finish interrupt struct\n");
@@ -162,7 +165,8 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
     printf("finish parameter\n");
     // タスク優先順位 1 ~ 25    25が最高優先度
     xTaskCreatePinnedToCore(myTaskInterrupt,
-                            "interrupt", 8192, &interrupt, configMAX_PRIORITIES, NULL, PRO_CPU_NUM);
+                            "interrupt", 8192, &interrupt, configMAX_PRIORITIES, NULL, APP_CPU_NUM);
+    printf("finish interrupt task\n");
     /*xTaskCreatePinnedToCore(myTaskAdc,
                             "adc", 8192, &adc, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);*/
     xTaskCreatePinnedToCore(myTaskLog,
@@ -179,9 +183,10 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
     const int MODE_MIN = 0;
 
     /* メインループ */
+    printf("start main loop\n");
     while (1)
     {
-
+        
         led.set(mode + 1);
 
         /*vTaskList(buffer);
@@ -235,6 +240,7 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
         //printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        printf("time:%d  vel:%lf  rad:%lf\n", time_count, val.current.vel, val.current.rad);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);
     }

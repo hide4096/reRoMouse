@@ -29,7 +29,8 @@ void Interrupt::set_device(MCP3464 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_b
     imu = &_imu;
     led = &_led;
     mot = &_mot;
-    std::cout << "set_device" << std::endl;
+    //std::cout << "set_device" << std::endl;
+    //printf("set_device\n");
 }
 
 void Interrupt::GetSemphrHandle(SemaphoreHandle_t *_on_logging) { on_logging = _on_logging; }

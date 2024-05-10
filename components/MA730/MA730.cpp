@@ -5,7 +5,7 @@ MA730::MA730(spi_host_device_t bus, gpio_num_t cs)
     // SPIデバイスの設定
     memset(&dev_enc, 0, sizeof(dev_enc));
     dev_enc.clock_speed_hz = 25 * 1000 * 1000; // Max 25MHz
-    dev_enc.mode = 1;
+    dev_enc.mode = 3;
     dev_enc.spics_io_num = cs;
     dev_enc.queue_size = 1;
 
