@@ -240,7 +240,7 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
         //printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        printf("time:%d  vel:%lf  rad:%lf\n", time_count, val.current.vel, val.current.rad);
+        printf("time:%d  mode:%d  vel:%lf  rad:%lf\n", time_count, mode, val.current.vel, val.current.rad);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);
     }
