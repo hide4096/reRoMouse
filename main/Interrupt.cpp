@@ -184,7 +184,7 @@ void Interrupt::feedback_control()
         control->V_l -= val->current.ang_error * (control->o.Kp) + val->I.ang_error * (control->o.Ki) - val->p.ang_error * (control->o.Kd);
         control->V_r += val->current.ang_error * (control->o.Kp) + val->I.ang_error * (control->o.Ki) - val->p.ang_error * (control->o.Kd);
 
-        control->Duty_l = control->V_l / sens->BatteryVoltage;
+        control->Duty_l = control->V_l / sens->BatteryVoltage;  // zero division error に注意
         control->Duty_r = control->V_r / sens->BatteryVoltage;
 
         mot->setMotorSpeed(control->Duty_r, control->Duty_l);
