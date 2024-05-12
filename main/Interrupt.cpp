@@ -202,7 +202,7 @@ void Interrupt::calc_distance()
 { //  走行距離を計算する
 
     // エンコーダの値を取得
-    sens->enc.data.l = -encL->readAngle();
+    sens->enc.data.l = encL->readAngle();
     sens->enc.data.r = encR->readAngle();
 
     sens->enc.locate.l = sens->enc.data.l;
