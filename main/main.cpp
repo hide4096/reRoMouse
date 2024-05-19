@@ -19,6 +19,13 @@ extern "C"
 }
 #include "sdkconfig.h"
 
+struct pid_gain_t
+{
+    float kp;
+    float ki;
+    float kd;
+};
+
 class driver_t
 {
 public:
@@ -38,13 +45,9 @@ public:
     uint8_t mode;
     uint64_t tick;
     bool enable;
-};
 
-struct pid_gain_t
-{
-    float kp;
-    float ki;
-    float kd;
+    pid_gain_t vel_gain;
+    pid_gain_t angvel_gain;
 };
 
 void control_1ms_task(void *pvparam)
@@ -69,8 +72,8 @@ void control_1ms_task(void *pvparam)
 
     float voltage = 4.0;
 
-    pid_gain_t vel_gain = {5.0, 10.0, 0.0};
-    pid_gain_t angvel_gain = {0.8, 10.0, 0.0};
+    pid_gain_t vel_gain = driver->vel_gain;
+    pid_gain_t angvel_gain = driver->angvel_gain;
 
     while (1)
     {
@@ -78,6 +81,13 @@ void control_1ms_task(void *pvparam)
         if (driver->enable == false)
         {
             driver->motor->setMotorSpeed(0, 0);
+            integral_angvelError = 0;
+            integral_velError = 0;
+            past_vel = 0;
+            past_angvel = 0;
+            yaw = 0;
+            vel = 0;
+            angvel = 0;
             vTaskDelay(1);
             continue;
         }
@@ -161,40 +171,154 @@ driver_t driver;
 static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
 {
     char recv[32];
-    char buf[32];
+    char buf[64];
     memcpy(recv, ctxt->om->om_data, sizeof(recv));
     recv[sizeof(recv) - 1] = '\0';
-    int _parse_space = 0;
-    for (int i = 0; i < sizeof(recv); i++)
+
+    char command[8];
+    char option[8];
+    for (int i = 0; i < sizeof(command); i++)
     {
         if (recv[i] == ' ')
         {
-            _parse_space = i;
+            command[i] = '\0';
+            for (int j = 0; j < sizeof(option); j++)
+            {
+                if (recv[i + j + 1] == '\0' || recv[i + j + 1] == '\n')
+                {
+                    option[j] = '\0';
+                    break;
+                }
+                option[j] = recv[i + j + 1];
+            }
             break;
         }
+        else if (recv[i] == '\0' || recv[i] == '\n')
+        {
+            command[i] = '\0';
+            option[0] = '\0';
+            break;
+        }
+        command[i] = recv[i];
     }
-    if (memcmp(recv, "run", 3) == 0)
+
+    ESP_LOGI("nordic_uart", "command: %s, option: %s", command, option);
+
+    if (memcmp(command, "run", 3) == 0)
     {
         driver.enable = true;
         nordic_uart_sendln("run");
-
+        return;
     }
-    else if (memcmp(recv, "stop", 4) == 0)
+    else if (memcmp(command, "stop", 4) == 0)
     {
         driver.enable = false;
         nordic_uart_sendln("stop");
+        return;
     }
-    else if (memcmp(recv, "vel", _parse_space) == 0)
+
+    if (driver.enable)
     {
-        driver.tgt_vel = atof(recv + _parse_space + 1);
-        sprintf(buf, "vel %f", driver.tgt_vel);
-        nordic_uart_sendln(buf);
+        nordic_uart_sendln("stop before setting");
+        return;
     }
-    else if (memcmp(recv, "angvel", _parse_space) == 0)
+
+    if (memcmp(command, "push", 4) == 0)
     {
-        driver.tgt_angvel = atof(recv + _parse_space + 1);
-        sprintf(buf, "angvel %f", driver.tgt_angvel);
+        nvs_handle nvsHandle;
+        esp_err_t ret = nvs_open("setting", NVS_READWRITE, &nvsHandle);
+        if (ret == ESP_OK)
+        {
+            nvs_set_blob(nvsHandle, "vel_gain", &driver.vel_gain, sizeof(pid_gain_t));
+            nvs_set_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, sizeof(pid_gain_t));
+            nvs_commit(nvsHandle);
+            nvs_close(nvsHandle);
+            nordic_uart_sendln("success");
+        }
+        else
+        {
+            nordic_uart_sendln("failed");
+        }
+        return;
+    }
+    else if (memcmp(command, "pull", 4) == 0)
+    {
+        nvs_handle nvsHandle;
+        esp_err_t ret = nvs_open("setting", NVS_READONLY, &nvsHandle);
+        if (ret == ESP_OK)
+        {
+            size_t size = sizeof(pid_gain_t);
+            nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size);
+            nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size);
+            nvs_close(nvsHandle);
+            nordic_uart_sendln("success");
+        }
+        else
+        {
+            nordic_uart_sendln("failed");
+        }
+        return;
+    }
+    else if (memcmp(command, "show", 4) == 0)
+    {
+        sprintf(buf, "vel_gain: %.2f %.2f %.2f", driver.vel_gain.kp, driver.vel_gain.ki, driver.vel_gain.kd);
         nordic_uart_sendln(buf);
+        sprintf(buf, "angvel_gain: %.2f %.2f %.2f", driver.angvel_gain.kp, driver.angvel_gain.ki, driver.angvel_gain.kd);
+        nordic_uart_sendln(buf);
+        return;
+    }
+
+    if (memcmp(command, "vel", 3) == 0)
+    {
+        if (memcmp(option, "kp", 2) == 0)
+        {
+            driver.vel_gain.kp = atof(&recv[8]);
+        }
+        else if (memcmp(option, "ki", 2) == 0)
+        {
+            driver.vel_gain.ki = atof(&recv[8]);
+        }
+        else if (memcmp(option, "kd", 2) == 0)
+        {
+            driver.vel_gain.kd = atof(&recv[8]);
+        }
+        else if (memcmp(option, "vel", 3) == 0)
+        {
+            driver.tgt_vel = atof(&recv[12]);
+        }
+        else
+        {
+            nordic_uart_sendln("invalid option");
+            return;
+        }
+        nordic_uart_sendln("success");
+        return;
+    }
+    else if (memcmp(command, "angvel", 6) == 0)
+    {
+        if (memcmp(option, "kp", 2) == 0)
+        {
+            driver.angvel_gain.kp = atof(&recv[8]);
+        }
+        else if (memcmp(option, "ki", 2) == 0)
+        {
+            driver.angvel_gain.ki = atof(&recv[8]);
+        }
+        else if (memcmp(option, "kd", 2) == 0)
+        {
+            driver.angvel_gain.kd = atof(&recv[8]);
+        }
+        else if (memcmp(option, "vel", 3) == 0)
+        {
+            driver.tgt_angvel = atof(&recv[14]);
+        }
+        else
+        {
+            nordic_uart_sendln("invalid option");
+            return;
+        }
+        nordic_uart_sendln("success");
+        return;
     }
 }
 
@@ -210,6 +334,22 @@ extern "C" void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    // PIDゲインの設定
+    nvs_handle nvsHandle;
+    ret = nvs_open("setting", NVS_READONLY, &nvsHandle);
+    size_t size = sizeof(pid_gain_t);
+    if (ret == ESP_OK)
+    {
+        nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size);
+        nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size);
+        nvs_close(nvsHandle);
+    }
+    else
+    {
+        driver.vel_gain = {0.0, 0.0, 0.0};
+        driver.angvel_gain = {0.0, 0.0, 0.0};
+    }
 
     // BLEの初期化
     nordic_uart_start("reRoMouse", onStatusChanged);
