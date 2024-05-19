@@ -11,26 +11,21 @@
 
 #define READ_COMMAND 0b010
 #define WRITE_COMMAND 0b100
-#define Rotation_direction 0b01001 // 回転方向逆転のアドレス　ここの7bit目を1にすると回転方向が逆になる
-#define RESOLUTION_MAX 16384
-#define RESORUTION_HALF 8192
-
-
+#define ADRS_Rotation_direction 0b01001 // 回転方向逆転のアドレス　ここの7bit目を1にすると回転方向が逆になる
 
 class MA730
 {
     public:
-    MA730(spi_host_device_t bus, gpio_num_t cs);
+    MA730(spi_host_device_t bus, gpio_num_t cs, uint8_t ccw);
     ~MA730();
 
     //void GetData(t_sens_data *_sens) override;
     uint16_t readAngle();
-    void ShowAngle();
 
 private:
     uint16_t read();
     uint16_t OperateRegisters(const uint8_t command, const uint8_t address, const uint8_t data);
-    uint8_t ReadRegister(const uint8_t address, const uint8_t data);
+    uint8_t ReadRegister(const uint8_t address);
     uint8_t WriteRegister(const uint8_t address, const uint8_t data);
     esp_err_t ret;
     esp_err_t err;
