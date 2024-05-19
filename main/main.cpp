@@ -13,8 +13,9 @@
 #include "Buzzer.hpp"
 #include "Motor.hpp"
 #include "MA730.hpp"
-extern "C" {
-    #include "nimble-nordic-uart.h"
+extern "C"
+{
+#include "nimble-nordic-uart.h"
 }
 #include "sdkconfig.h"
 
@@ -61,7 +62,6 @@ void control_1ms_task(void *pvparam)
     float past_vel = 0;
     float past_angvel = 0;
 
-
     const uint16_t RESOLUTION = 0x4000;
     const uint16_t HALF_RES = RESOLUTION / 2;
     const float TIRE_DIAM = 0.01368;
@@ -74,7 +74,15 @@ void control_1ms_task(void *pvparam)
 
     while (1)
     {
-        //エンコーダーの値を取得
+
+        if (driver->enable == false)
+        {
+            driver->motor->setMotorSpeed(0, 0);
+            vTaskDelay(1);
+            continue;
+        }
+
+        // エンコーダーの値を取得
         uint16_t encL = driver->encL->readAngle();
         uint16_t encR = driver->encR->readAngle();
 
@@ -84,16 +92,16 @@ void control_1ms_task(void *pvparam)
         past_encL = encL;
         past_encR = encR;
 
-        //速度計算
-        if(diff_encL > HALF_RES)
+        // 速度計算
+        if (diff_encL > HALF_RES)
             diff_encL -= RESOLUTION - 1;
-        if(diff_encR > HALF_RES)
+        if (diff_encR > HALF_RES)
             diff_encR -= RESOLUTION - 1;
-        if(diff_encL < -HALF_RES)
+        if (diff_encL < -HALF_RES)
             diff_encL += RESOLUTION - 1;
-        if(diff_encR < -HALF_RES)
+        if (diff_encR < -HALF_RES)
             diff_encR += RESOLUTION - 1;
-        
+
         float lenL = diff_encL * PULSE2RAD;
         float lenR = diff_encR * PULSE2RAD;
 
@@ -102,15 +110,15 @@ void control_1ms_task(void *pvparam)
 
         vel = (velL + velR) / 2;
 
-        //角度計算
+        // 角度計算
         angvel = (driver->imu->gyroZ() * (M_PI / 180.)) * -1.;
         yaw += angvel * 0.001;
 
         driver->spd = vel;
         driver->yaw = yaw;
 
-        //モーター制御
-        //PI-D制御
+        // モーター制御
+        // PI-D制御
         float velError = driver->tgt_vel - vel;
         float diff_vel = (past_vel - vel) / 0.001;
         integral_velError += velError * 0.001;
@@ -128,36 +136,73 @@ void control_1ms_task(void *pvparam)
         past_vel = vel;
         past_angvel = angvel;
 
-        if(driver->enable){
-            driver->motor->setMotorSpeed(voltageL / voltage, voltageR / voltage);
-        }else{
-            driver->motor->setMotorSpeed(0, 0);
-        }
+        driver->motor->setMotorSpeed(voltageL / voltage, voltageR / voltage);
 
         vTaskDelay(1);
     }
 }
 
 bool nordic_uart_connected = false;
-void onStatusChanged(nordic_uart_callback_type callback_type){
-    switch(callback_type){
-        case NORDIC_UART_CONNECTED:
-            nordic_uart_connected = true;
-            break;
-        case NORDIC_UART_DISCONNECTED:
-            nordic_uart_connected = false;
-            break;
+void onStatusChanged(nordic_uart_callback_type callback_type)
+{
+    switch (callback_type)
+    {
+    case NORDIC_UART_CONNECTED:
+        nordic_uart_connected = true;
+        break;
+    case NORDIC_UART_DISCONNECTED:
+        nordic_uart_connected = false;
+        break;
     }
 }
 
-void onRecieved(struct ble_gatt_access_ctxt *ctxt){
+driver_t driver;
+
+static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
+{
+    char recv[32];
+    char buf[32];
+    memcpy(recv, ctxt->om->om_data, sizeof(recv));
+    recv[sizeof(recv) - 1] = '\0';
+    int _parse_space = 0;
+    for (int i = 0; i < sizeof(recv); i++)
+    {
+        if (recv[i] == ' ')
+        {
+            _parse_space = i;
+            break;
+        }
+    }
+    if (memcmp(recv, "run", 3) == 0)
+    {
+        driver.enable = true;
+        nordic_uart_sendln("run");
+
+    }
+    else if (memcmp(recv, "stop", 4) == 0)
+    {
+        driver.enable = false;
+        nordic_uart_sendln("stop");
+    }
+    else if (memcmp(recv, "vel", _parse_space) == 0)
+    {
+        driver.tgt_vel = atof(recv + _parse_space + 1);
+        sprintf(buf, "vel %f", driver.tgt_vel);
+        nordic_uart_sendln(buf);
+    }
+    else if (memcmp(recv, "angvel", _parse_space) == 0)
+    {
+        driver.tgt_angvel = atof(recv + _parse_space + 1);
+        sprintf(buf, "angvel %f", driver.tgt_angvel);
+        nordic_uart_sendln(buf);
+    }
 }
 
 extern "C" void app_main(void)
 {
     esp_err_t ret;
 
-    //NVSの初期化
+    // NVSの初期化
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -170,7 +215,6 @@ extern "C" void app_main(void)
     nordic_uart_start("reRoMouse", onStatusChanged);
     nordic_uart_yield(onRecieved);
 
-    driver_t driver;
     // IMU SPIバスの設定
     spi_bus_config_t bus_imu_adc;
     memset(&bus_imu_adc, 0, sizeof(bus_imu_adc));
@@ -221,8 +265,7 @@ extern "C" void app_main(void)
     // Buzzerの設定
     driver.buzzer = new BUZZER(GPIO_NUM_13);
     static BUZZER::buzzer_score_t pc98[] = {
-        {2000,100},{1000,100}
-    };
+        {2000, 100}, {1000, 100}};
     driver.buzzer->play_melody(pc98, 2);
 
     // NeoPixelの設定
