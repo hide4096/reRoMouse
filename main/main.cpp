@@ -72,12 +72,8 @@ void control_1ms_task(void *pvparam)
 
     float voltage = 4.0;
 
-    pid_gain_t vel_gain = driver->vel_gain;
-    pid_gain_t angvel_gain = driver->angvel_gain;
-
     while (1)
     {
-
         if (driver->enable == false)
         {
             driver->motor->setMotorSpeed(0, 0);
@@ -88,8 +84,10 @@ void control_1ms_task(void *pvparam)
             yaw = 0;
             vel = 0;
             angvel = 0;
-            vTaskDelay(1);
-            continue;
+            while (driver->enable == false)
+            {
+                vTaskDelay(1);
+            }
         }
 
         // エンコーダーの値を取得
@@ -137,6 +135,9 @@ void control_1ms_task(void *pvparam)
         float diff_angvel = (past_angvel - angvel) / 0.001;
         integral_angvelError += angvelError * 0.001;
 
+        pid_gain_t vel_gain = driver->vel_gain;
+        pid_gain_t angvel_gain = driver->angvel_gain;
+
         float voltageL = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
         float voltageR = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
 
@@ -168,41 +169,34 @@ void onStatusChanged(nordic_uart_callback_type callback_type)
 
 driver_t driver;
 
+inline void parse_command(char *input, char *output, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (input[i] == ' ' || input[i] == '\0' || input[i] == '\n')
+        {
+            memcpy(output, input, i);
+            output[i] = '\0';
+            return;
+        }
+    }
+    output[0] = '\0';
+}
+
 static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
 {
-    char recv[32];
     char buf[64];
-    memcpy(recv, ctxt->om->om_data, sizeof(recv));
-    recv[sizeof(recv) - 1] = '\0';
+    char *recv = (char *)ctxt->om->om_data;
 
-    char command[8];
-    char option[8];
-    for (int i = 0; i < sizeof(command); i++)
-    {
-        if (recv[i] == ' ')
-        {
-            command[i] = '\0';
-            for (int j = 0; j < sizeof(option); j++)
-            {
-                if (recv[i + j + 1] == '\0' || recv[i + j + 1] == '\n')
-                {
-                    option[j] = '\0';
-                    break;
-                }
-                option[j] = recv[i + j + 1];
-            }
-            break;
-        }
-        else if (recv[i] == '\0' || recv[i] == '\n')
-        {
-            command[i] = '\0';
-            option[0] = '\0';
-            break;
-        }
-        command[i] = recv[i];
-    }
+    char command[16] = {0};
+    char option[16] = {0};
+    char argument[16] = {0};
 
-    ESP_LOGI("nordic_uart", "command: %s, option: %s", command, option);
+    parse_command(recv, command, sizeof(command));
+    recv += strlen(command) + 1;
+    parse_command(recv, option, sizeof(option));
+    recv += strlen(option) + 1;
+    parse_command(recv, argument, sizeof(argument));
 
     if (memcmp(command, "run", 3) == 0)
     {
@@ -261,9 +255,9 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
     }
     else if (memcmp(command, "show", 4) == 0)
     {
-        sprintf(buf, "vel_gain: %.2f %.2f %.2f", driver.vel_gain.kp, driver.vel_gain.ki, driver.vel_gain.kd);
+        sprintf(buf, "vel_gain: %.3f %.3f %.3f", driver.vel_gain.kp, driver.vel_gain.ki, driver.vel_gain.kd);
         nordic_uart_sendln(buf);
-        sprintf(buf, "angvel_gain: %.2f %.2f %.2f", driver.angvel_gain.kp, driver.angvel_gain.ki, driver.angvel_gain.kd);
+        sprintf(buf, "angvel_gain: %.3f %.3f %.3f", driver.angvel_gain.kp, driver.angvel_gain.ki, driver.angvel_gain.kd);
         nordic_uart_sendln(buf);
         return;
     }
@@ -272,19 +266,19 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
     {
         if (memcmp(option, "kp", 2) == 0)
         {
-            driver.vel_gain.kp = atof(&recv[8]);
+            driver.vel_gain.kp = atof(argument);
         }
         else if (memcmp(option, "ki", 2) == 0)
         {
-            driver.vel_gain.ki = atof(&recv[8]);
+            driver.vel_gain.ki = atof(argument);
         }
         else if (memcmp(option, "kd", 2) == 0)
         {
-            driver.vel_gain.kd = atof(&recv[8]);
+            driver.vel_gain.kd = atof(argument);
         }
         else if (memcmp(option, "vel", 3) == 0)
         {
-            driver.tgt_vel = atof(&recv[12]);
+            driver.tgt_vel = atof(argument);
         }
         else
         {
@@ -298,19 +292,19 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
     {
         if (memcmp(option, "kp", 2) == 0)
         {
-            driver.angvel_gain.kp = atof(&recv[8]);
+            driver.angvel_gain.kp = atof(argument);
         }
         else if (memcmp(option, "ki", 2) == 0)
         {
-            driver.angvel_gain.ki = atof(&recv[8]);
+            driver.angvel_gain.ki = atof(argument);
         }
         else if (memcmp(option, "kd", 2) == 0)
         {
-            driver.angvel_gain.kd = atof(&recv[8]);
+            driver.angvel_gain.kd = atof(argument);
         }
         else if (memcmp(option, "vel", 3) == 0)
         {
-            driver.tgt_angvel = atof(&recv[14]);
+            driver.tgt_angvel = atof(argument);
         }
         else
         {
@@ -319,6 +313,27 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         }
         nordic_uart_sendln("success");
         return;
+    }
+
+    if (memcmp(command, "led", 3) == 0)
+    {
+        driver.led->set(atoi(option));
+        nordic_uart_sendln("success");
+        return;
+    }
+    else if (memcmp(command, "neopixel", 8) == 0)
+    {
+        if (memcmp(option, "off", 3) == 0)
+        {
+            driver.np->set_hsv({0, 0, 0}, 0, 1);
+        }
+        else if (memcmp(option, "hue", 3) == 0)
+        {
+            uint8_t hue = atoi(argument);
+            driver.np->set_hsv({hue, 100, 5}, 0, 1);
+        }
+        driver.np->show();
+        nordic_uart_sendln("success");
     }
 }
 
@@ -409,7 +424,7 @@ extern "C" void app_main(void)
     driver.buzzer->play_melody(pc98, 2);
 
     // NeoPixelの設定
-    driver.np = new NeoPixel(GPIO_NUM_12, 1);
+    driver.np = new NeoPixel(GPIO_NUM_15, 1);
     driver.np->show();
 
     // モーター関係の設定
@@ -425,6 +440,6 @@ extern "C" void app_main(void)
 
     while (1)
     {
-        vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
