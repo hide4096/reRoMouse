@@ -211,7 +211,7 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         return;
     }
 
-    if(memcmp(command, "radio", 5) == 0)
+    if (memcmp(command, "radio", 5) == 0)
     {
         int _vel = atoi(option);
         int _angvel = atoi(argument);
@@ -424,7 +424,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
 
     driver.led = new PCA9632(I2C_NUM_0, 0x62);
-    driver.led->set(0b1001);
+    driver.led->set(0);
 
     // Buzzerの設定
     driver.buzzer = new BUZZER(GPIO_NUM_13);
@@ -443,7 +443,7 @@ extern "C" void app_main(void)
     driver.np->show();
 
     driver.enable = false;
-    xTaskCreatePinnedToCore(control_1ms_task, "control_1ms_task", 8192, &driver, 1, NULL, 0);
+    xTaskCreatePinnedToCore(control_1ms_task, "control_1ms_task", 8192, &driver, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);
     driver.tgt_vel = 0;
     driver.tgt_angvel = 0;
 

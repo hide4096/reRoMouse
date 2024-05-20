@@ -16,6 +16,10 @@ NeoPixel::NeoPixel(gpio_num_t pin, int _leds = 100){
     ESP_ERROR_CHECK(rmt_enable(neopixel_ch));
 
     leds = _leds;
+
+    // LED1個でも2個分のメモリを確保する
+    // 1個分だと挙動がおかしくなる（2回showしないとはんえいされない）
+    if(leds <= 1) leds = 2;
     grb = (rgb_t*)calloc(leds, sizeof(rgb_t));
     ESP_ERROR_CHECK(grb ? ESP_OK : ESP_ERR_NO_MEM);
 }
@@ -194,5 +198,5 @@ void NeoPixel::set_hsv(hsv_t hsv, uint start, uint len){
         break;
     }
 
-    set(rgb, start, len);
+    this->set(rgb, start, len);
 }
