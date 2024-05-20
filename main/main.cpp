@@ -197,7 +197,7 @@ void control_1ms_task(void *pvparam)
             tracking.xi += dxi * 0.001;
 
             driver->tgt_vel = tracking.xi;
-            if(tracking.xi > 0.01)
+            if(tracking.xi > 0.05)
                 driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / tracking.xi;
             else
                 driver->tgt_angvel = 0;
