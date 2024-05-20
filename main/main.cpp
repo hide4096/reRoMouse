@@ -211,6 +211,15 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         return;
     }
 
+    if(memcmp(command, "radio", 5) == 0)
+    {
+        int _vel = atoi(option);
+        int _angvel = atoi(argument);
+        driver.tgt_vel = (_vel - 50) / 50.0 * 0.2;
+        driver.tgt_angvel = (_angvel - 50) / 50.0 * 2.0;
+        return;
+    }
+
     if (driver.enable)
     {
         nordic_uart_sendln("stop before setting");
