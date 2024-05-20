@@ -53,11 +53,17 @@ public:
     float angaccelMax = 30 * M_PI; // rad/s/s
 };
 
-QueueHandle_t notifyVoltage;
+QueueHandle_t notify;
+
 struct voltage_t
 {
     float voltageL;
     float voltageR;
+};
+struct notify_t
+{
+    voltage_t output_voltage;
+    voltage_t ff_voltage;
 };
 
 void control_1ms_task(void *pvparam)
@@ -83,6 +89,8 @@ void control_1ms_task(void *pvparam)
     float voltage = 4.0;
     voltage_t volt = {0, 0};
     voltage_t ff_volt = {0, 0};
+
+    notify_t notifyMsg;
 
     float ramp_tgt_vel = 0;
     float ramp_tgt_angvel = 0;
@@ -194,7 +202,11 @@ void control_1ms_task(void *pvparam)
         past_vel = vel;
         past_angvel = angvel;
 
-        xQueueSend(notifyVoltage, &volt, 0);
+        // データをキューに送信
+        notifyMsg.output_voltage = volt;
+        notifyMsg.ff_voltage = ff_volt;
+        xQueueSend(notify, &notifyMsg, 0);
+
         driver->motor->setMotorSpeed((volt.voltageL + ff_volt.voltageL) / voltage, (volt.voltageR + ff_volt.voltageR) / voltage);
 
         vTaskDelay(1);
@@ -492,7 +504,7 @@ extern "C" void app_main(void)
     driver.np->show();
 
     // モーター関係の設定
-    notifyVoltage = xQueueCreate(1, sizeof(voltage_t));
+    notify = xQueueCreate(1, sizeof(notify_t));
     driver.motor = new Motor(GPIO_NUM_41, GPIO_NUM_42, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_11, GPIO_NUM_40);
 
     driver.np->set_hsv({0, 0, 0}, 0, 1);
@@ -503,15 +515,21 @@ extern "C" void app_main(void)
     driver.tgt_vel = 0;
     driver.tgt_angvel = 0;
 
-    voltage_t volt = {0, 0};
     char buf[64];
+    notify_t notifyMsg;
 
     while (1)
+    {
         if (driver.enable)
         {
-            xQueueReceive(notifyVoltage, &volt, portMAX_DELAY);
-            sprintf(buf, "%1.3f %1.3f", volt.voltageL, volt.voltageR);
+            xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
+            sprintf(buf, "%1.3f %1.3f", notifyMsg.ff_voltage.voltageL, notifyMsg.ff_voltage.voltageR);
             nordic_uart_sendln(buf);
             vTaskDelay(pdMS_TO_TICKS(50));
         }
+        else
+        {
+            vTaskDelay(1);
+        }
+    }
 }
