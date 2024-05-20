@@ -48,6 +48,16 @@ public:
 
     pid_gain_t vel_gain;
     pid_gain_t angvel_gain;
+    float ff_gain = 0;
+    float accelMax = 6;            // m/s/s
+    float angaccelMax = 30 * M_PI; // rad/s/s
+};
+
+QueueHandle_t notifyVoltage;
+struct voltage_t
+{
+    float voltageL;
+    float voltageR;
 };
 
 void control_1ms_task(void *pvparam)
@@ -71,6 +81,11 @@ void control_1ms_task(void *pvparam)
     const float PULSE2RAD = TIRE_DIAM * M_PI / RESOLUTION;
 
     float voltage = 4.0;
+    voltage_t volt = {0, 0};
+    voltage_t ff_volt = {0, 0};
+
+    float ramp_tgt_vel = 0;
+    float ramp_tgt_angvel = 0;
 
     while (1)
     {
@@ -84,6 +99,8 @@ void control_1ms_task(void *pvparam)
             yaw = 0;
             vel = 0;
             angvel = 0;
+            ramp_tgt_vel = 0;
+            ramp_tgt_angvel = 0;
             while (driver->enable == false)
             {
                 vTaskDelay(1);
@@ -126,28 +143,59 @@ void control_1ms_task(void *pvparam)
         driver->yaw = yaw;
 
         // モーター制御
+        // ステップで渡されるターゲット速度と角度をランプ入力にする
+        float _angaccel = 0;
+        float _accel = 0;
+
+        float _demand_accel = (driver->tgt_vel - ramp_tgt_vel) / 0.001;
+        float _demand_angaccel = (driver->tgt_angvel - ramp_tgt_angvel) / 0.001;
+
+        if (_demand_accel > driver->accelMax)
+            _accel = driver->accelMax * 0.001;
+        else if (_demand_accel < -driver->accelMax)
+            _accel = -driver->accelMax * 0.001;
+        else
+            ramp_tgt_vel = driver->tgt_vel;
+
+        if (_demand_angaccel > driver->angaccelMax)
+            _angaccel = driver->angaccelMax * 0.001;
+        else if (_demand_angaccel < -driver->angaccelMax)
+            _angaccel = -driver->angaccelMax * 0.001;
+        else
+            ramp_tgt_angvel = driver->tgt_angvel;
+
+        if (_accel != 0)
+            ramp_tgt_vel += _accel;
+        if (_angaccel != 0)
+            ramp_tgt_angvel += _angaccel;
+
+        // FF制御
+        ff_volt.voltageL = (_accel - _angaccel * 0.0105) * driver->ff_gain;
+        ff_volt.voltageR = (_accel + _angaccel * 0.0105) * driver->ff_gain;
+
         // PI-D制御
-        float velError = driver->tgt_vel - vel;
+        float velError = ramp_tgt_vel - vel;
         float diff_vel = (past_vel - vel) / 0.001;
         integral_velError += velError * 0.001;
 
-        float angvelError = driver->tgt_angvel - angvel;
+        float angvelError = ramp_tgt_angvel - angvel;
         float diff_angvel = (past_angvel - angvel) / 0.001;
         integral_angvelError += angvelError * 0.001;
 
         pid_gain_t vel_gain = driver->vel_gain;
         pid_gain_t angvel_gain = driver->angvel_gain;
 
-        float voltageL = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
-        float voltageR = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
+        volt.voltageL = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
+        volt.voltageR = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
 
-        voltageL -= angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
-        voltageR += angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
+        volt.voltageL -= angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
+        volt.voltageR += angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
 
         past_vel = vel;
         past_angvel = angvel;
 
-        driver->motor->setMotorSpeed(voltageL / voltage, voltageR / voltage);
+        xQueueSend(notifyVoltage, &volt, 0);
+        driver->motor->setMotorSpeed((volt.voltageL + ff_volt.voltageL) / voltage, (volt.voltageR + ff_volt.voltageR) / voltage);
 
         vTaskDelay(1);
     }
@@ -323,6 +371,12 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         nordic_uart_sendln("success");
         return;
     }
+    else if (memcmp(command, "ff", 2) == 0)
+    {
+        driver.ff_gain = atof(option);
+        nordic_uart_sendln("success");
+        return;
+    }
 
     if (memcmp(command, "led", 3) == 0)
     {
@@ -424,12 +478,13 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
 
     driver.led = new PCA9632(I2C_NUM_0, 0x62);
-    driver.led->set(0);
+    driver.led->set(0b1001);
 
     // Buzzerの設定
     driver.buzzer = new BUZZER(GPIO_NUM_13);
     static BUZZER::buzzer_score_t pc98[] = {
         {2000, 100}, {1000, 100}};
+
     driver.buzzer->play_melody(pc98, 2);
 
     // NeoPixelの設定
@@ -437,6 +492,7 @@ extern "C" void app_main(void)
     driver.np->show();
 
     // モーター関係の設定
+    notifyVoltage = xQueueCreate(1, sizeof(voltage_t));
     driver.motor = new Motor(GPIO_NUM_41, GPIO_NUM_42, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_11, GPIO_NUM_40);
 
     driver.np->set_hsv({0, 0, 0}, 0, 1);
@@ -447,8 +503,15 @@ extern "C" void app_main(void)
     driver.tgt_vel = 0;
     driver.tgt_angvel = 0;
 
+    voltage_t volt = {0, 0};
+    char buf[64];
+
     while (1)
-    {
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
+        if (driver.enable)
+        {
+            xQueueReceive(notifyVoltage, &volt, portMAX_DELAY);
+            sprintf(buf, "%1.3f %1.3f", volt.voltageL, volt.voltageR);
+            nordic_uart_sendln(buf);
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
 }
