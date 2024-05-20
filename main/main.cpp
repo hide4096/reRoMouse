@@ -28,6 +28,18 @@ struct pid_gain_t
     float kd;
 };
 
+enum Mode
+{
+    GENERAL,
+    TRAJECT
+};
+
+struct orbit_t
+{
+    float x_acc;
+    float y_acc;
+};
+
 class driver_t
 {
 public:
@@ -41,18 +53,19 @@ public:
 
     float tgt_vel;
     float tgt_angvel;
-    float spd;
-    float yaw;
 
-    uint8_t mode;
+    Mode mode = GENERAL;
     uint64_t tick;
     bool enable;
 
     pid_gain_t vel_gain;
     pid_gain_t angvel_gain;
-    float ff_gain = 0;
-    float accelMax = 6;            // m/s/s
+    float ff_gain = 100;
+    float accelMax = 10;           // m/s/s
     float angaccelMax = 30 * M_PI; // rad/s/s
+
+    orbit_t *orbit;
+    uint32_t orbit_size;
 };
 
 QueueHandle_t notify;
@@ -64,18 +77,36 @@ struct voltage_t
     float voltageL;
     float voltageR;
 };
+
+struct odometry_t
+{
+    float x;
+    float y;
+    float yaw;
+};
+
+struct tracking_t
+{
+    float x;
+    float y;
+    float dx;
+    float dy;
+    float xi;
+};
+
 struct notify_t
 {
     voltage_t output_voltage;
     voltage_t ff_voltage;
+    odometry_t odom;
 };
 
 void control_1ms_task(void *pvparam)
 {
     driver_t *driver = (driver_t *)pvparam;
 
+    odometry_t odom = {0, 0, 0};
     float vel = 0;
-    float yaw = 0;
     float angvel = 0;
     uint16_t past_encL = driver->encL->readAngle();
     uint16_t past_encR = driver->encR->readAngle();
@@ -99,6 +130,13 @@ void control_1ms_task(void *pvparam)
     float ramp_tgt_vel = 0;
     float ramp_tgt_angvel = 0;
 
+    tracking_t tracking = {0, 0, 0, 0, 0};
+    float Kx1 = 0;
+    float Kx2 = 0;
+    float Ky1 = 0;
+    float Ky2 = 0;
+    driver->tick = 0;
+
     while (1)
     {
         if (driver->enable == false)
@@ -108,15 +146,49 @@ void control_1ms_task(void *pvparam)
             integral_velError = 0;
             past_vel = 0;
             past_angvel = 0;
-            yaw = 0;
             vel = 0;
             angvel = 0;
             ramp_tgt_vel = 0;
             ramp_tgt_angvel = 0;
+            driver->tick = 0;
+            memset(&tracking, 0, sizeof(tracking_t));
+            memset(&odom, 0, sizeof(odometry_t));
             while (driver->enable == false)
             {
                 vTaskDelay(1);
             }
+        }
+
+        switch (driver->mode)
+        {
+        case GENERAL:
+            break;
+        case TRAJECT:
+            if (driver->tick >= driver->orbit_size)
+            {
+                driver->enable = false;
+                break;
+            }
+
+            orbit_t _ob = driver->orbit[driver->tick];
+
+            float _dx = vel * cos(odom.yaw);
+            float _dy = vel * sin(odom.yaw);
+
+            float ux = _ob.x_acc + Kx1 * (tracking.dx - _dx) + Kx2 * (tracking.x - odom.x);
+            float uy = _ob.y_acc + Ky1 * (tracking.dy - _dy) + Ky2 * (tracking.y - odom.y);
+            float dxi = ux * cos(odom.yaw) - uy * sin(odom.yaw);
+
+            tracking.dx += _ob.x_acc * 0.001;
+            tracking.dy += _ob.y_acc * 0.001;
+            tracking.x += tracking.dx * 0.001;
+            tracking.y += tracking.dy * 0.001;
+            tracking.xi += dxi * 0.001;
+
+            driver->tgt_vel = tracking.xi;
+            driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / tracking.xi;
+
+            break;
         }
 
         // エンコーダーの値を取得
@@ -149,10 +221,10 @@ void control_1ms_task(void *pvparam)
 
         // 角度計算
         angvel = (driver->imu->gyroZ() * (M_PI / 180.)) * -1.;
-        yaw += angvel * 0.001;
+        odom.yaw += angvel * 0.001;
 
-        driver->spd = vel;
-        driver->yaw = yaw;
+        odom.x += vel * cos(odom.yaw) * 0.001;
+        odom.y += vel * sin(odom.yaw) * 0.001;
 
         // モーター制御
         // ステップで渡されるターゲット速度と角度をランプ入力にする
@@ -209,10 +281,12 @@ void control_1ms_task(void *pvparam)
         // データをキューに送信
         notifyMsg.output_voltage = volt;
         notifyMsg.ff_voltage = ff_volt;
+        notifyMsg.odom = odom;
         xQueueSend(notify, &notifyMsg, 0);
 
         driver->motor->setMotorSpeed((volt.voltageL + ff_volt.voltageL) / voltage, (volt.voltageR + ff_volt.voltageR) / voltage);
 
+        driver->tick++;
         vTaskDelay(1);
     }
 }
@@ -504,7 +578,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
 
     driver.led = new PCA9632(I2C_NUM_0, 0x62);
-    driver.led->set(0b1001);
+    driver.led->set(0b0000);
 
     // Buzzerの設定
     driver.buzzer = new BUZZER(GPIO_NUM_13);
@@ -532,10 +606,10 @@ extern "C" void app_main(void)
     char buf[64];
     notify_t notifyMsg;
 
-    //ファイルの確認
+    // ファイルの確認
     FILE *file = fopen("/storage/hello.txt", "rw");
     if (file != NULL)
-    {   
+    {
         char _buf[64];
         fgets(_buf, sizeof(_buf), file);
         ESP_LOGE("FAT", "%s", _buf);
@@ -547,9 +621,9 @@ extern "C" void app_main(void)
         if (driver.enable)
         {
             xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
-            sprintf(buf, "%1.3f %1.3f", notifyMsg.ff_voltage.voltageL, notifyMsg.ff_voltage.voltageR);
+            sprintf(buf, "%1.6f %1.6f", notifyMsg.odom.x, notifyMsg.odom.y);
             nordic_uart_sendln(buf);
-            vTaskDelay(pdMS_TO_TICKS(50));
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
         else
         {
