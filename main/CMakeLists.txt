@@ -7,5 +7,4 @@ idf_component_register(
 )
 
 set(image ../storage)
-# fatfs_create_spiflash_image(storage ${image} FLASH_IN_PROJECT PRESERVE_TIME)
-
+#fatfs_create_spiflash_image(storage ${image} FLASH_IN_PROJECT PRESERVE_TIME)

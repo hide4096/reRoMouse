@@ -60,12 +60,12 @@ public:
 
     pid_gain_t vel_gain;
     pid_gain_t angvel_gain;
-    float ff_gain = 100;
-    float accelMax = 10;           // m/s/s
-    float angaccelMax = 30 * M_PI; // rad/s/s
+    float ff_gain = 0;
+    float accelMax = 3.0;           // m/s/s
+    float angaccelMax = 20 * M_PI; // rad/s/s
 
     orbit_t *orbit;
-    uint32_t orbit_size;
+    uint16_t orbit_size;
 };
 
 QueueHandle_t notify;
@@ -99,6 +99,8 @@ struct notify_t
     voltage_t output_voltage;
     voltage_t ff_voltage;
     odometry_t odom;
+    float tgt_vel;
+    float tgt_angvel;
 };
 
 void control_1ms_task(void *pvparam)
@@ -131,10 +133,10 @@ void control_1ms_task(void *pvparam)
     float ramp_tgt_angvel = 0;
 
     tracking_t tracking = {0, 0, 0, 0, 0};
-    float Kx1 = 0;
-    float Kx2 = 0;
-    float Ky1 = 0;
-    float Ky2 = 0;
+    float Kx1 = 10;
+    float Kx2 = 10;
+    float Ky1 = 10;
+    float Ky2 = 10;
     driver->tick = 0;
 
     while (1)
@@ -151,6 +153,8 @@ void control_1ms_task(void *pvparam)
             ramp_tgt_vel = 0;
             ramp_tgt_angvel = 0;
             driver->tick = 0;
+            driver->tgt_vel = 0;
+            driver->tgt_angvel = 0;
             memset(&tracking, 0, sizeof(tracking_t));
             memset(&odom, 0, sizeof(odometry_t));
             while (driver->enable == false)
@@ -158,6 +162,13 @@ void control_1ms_task(void *pvparam)
                 vTaskDelay(1);
             }
         }
+
+        /*
+        if(fabs(vel) >= 2.0 || fabs(angvel) >= 30.0)
+        {
+            driver->enable = false;
+        }
+        */
 
         switch (driver->mode)
         {
@@ -177,7 +188,7 @@ void control_1ms_task(void *pvparam)
 
             float ux = _ob.x_acc + Kx1 * (tracking.dx - _dx) + Kx2 * (tracking.x - odom.x);
             float uy = _ob.y_acc + Ky1 * (tracking.dy - _dy) + Ky2 * (tracking.y - odom.y);
-            float dxi = ux * cos(odom.yaw) - uy * sin(odom.yaw);
+            float dxi = ux * cos(odom.yaw) + uy * sin(odom.yaw);
 
             tracking.dx += _ob.x_acc * 0.001;
             tracking.dy += _ob.y_acc * 0.001;
@@ -186,7 +197,12 @@ void control_1ms_task(void *pvparam)
             tracking.xi += dxi * 0.001;
 
             driver->tgt_vel = tracking.xi;
-            driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / tracking.xi;
+            if(tracking.xi > 0.01)
+                driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / tracking.xi;
+            else
+                driver->tgt_angvel = 0;
+
+            //ESP_LOGI("traject", "%.3f %.3f %.3f %.3f %.3f", ux, uy, sin(odom.yaw), cos(odom.yaw), tracking.xi);
 
             break;
         }
@@ -282,6 +298,8 @@ void control_1ms_task(void *pvparam)
         notifyMsg.output_voltage = volt;
         notifyMsg.ff_voltage = ff_volt;
         notifyMsg.odom = odom;
+        notifyMsg.tgt_vel = driver->tgt_vel;
+        notifyMsg.tgt_angvel = driver->tgt_angvel;
         xQueueSend(notify, &notifyMsg, 0);
 
         driver->motor->setMotorSpeed((volt.voltageL + ff_volt.voltageL) / voltage, (volt.voltageR + ff_volt.voltageR) / voltage);
@@ -338,6 +356,14 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
 
     if (memcmp(command, "run", 3) == 0)
     {
+        if(memcmp(option, "traject", 7) == 0){
+            driver.mode = TRAJECT;
+            nordic_uart_sendln("traject");
+        }
+        else
+        {
+            driver.mode = GENERAL;
+        }
         driver.enable = true;
         nordic_uart_sendln("run");
         return;
@@ -615,13 +641,46 @@ extern "C" void app_main(void)
         ESP_LOGE("FAT", "%s", _buf);
         fclose(file);
     }
+    // 軌道データの読み込み
+    file = fopen("/storage/traject.csv", "r");
+    if (file != NULL)
+    {
+        ESP_LOGI("FAT", "traject.csv found");
+        char _buf[64];
+        fgets(_buf, sizeof(_buf), file);
+        driver.orbit_size = atoi(_buf);
+        driver.orbit = (orbit_t *)malloc(sizeof(orbit_t) * driver.orbit_size);
+        ESP_LOGI("FAT", "orbit_size: %d", driver.orbit_size);
+        if (driver.orbit == NULL)
+        {
+            ESP_LOGE("FAT", "malloc failed");
+        }
+        else
+        {
+            for (int i = 0; i < driver.orbit_size; i++)
+            {
+                fgets(_buf, sizeof(_buf), file);
+                char *p = strtok(_buf, ",");
+                driver.orbit[i].x_acc = atof(p);
+                p = strtok(NULL, ",");
+                driver.orbit[i].y_acc = atof(p);
+            }
+            ESP_LOGI("FAT", "traject loaded");
+        }
+
+        /*
+        for(int i=0;i< driver.orbit_size;i++){
+            printf("%1.6f %1.6f\n", driver.orbit[i].x_acc, driver.orbit[i].y_acc);
+        }
+        */
+    }
 
     while (1)
     {
         if (driver.enable)
         {
             xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
-            sprintf(buf, "%1.6f %1.6f", notifyMsg.odom.x, notifyMsg.odom.y);
+            sprintf(buf,"%3.3f %3.3f",notifyMsg.tgt_vel,notifyMsg.tgt_angvel);
             nordic_uart_sendln(buf);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
