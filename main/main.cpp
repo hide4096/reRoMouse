@@ -6,6 +6,8 @@
 #include "driver/i2c.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "esp_vfs.h"
+#include "esp_vfs_fat.h"
 
 #include "NeoPixel.hpp"
 #include "MPU6500.hpp"
@@ -54,6 +56,8 @@ public:
 };
 
 QueueHandle_t notify;
+const char *base_path = "/storage";
+static wl_handle_t wl_handle = WL_INVALID_HANDLE;
 
 struct voltage_t
 {
@@ -425,6 +429,16 @@ extern "C" void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
+    const esp_vfs_fat_mount_config_t mount_config = {
+        .format_if_mount_failed = false,
+        .max_files = 10,
+        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
+        .disk_status_check_enable = true,
+    };
+
+    ret = esp_vfs_fat_spiflash_mount_rw_wl(base_path, "storage", &mount_config, &wl_handle);
+    ESP_ERROR_CHECK(ret);
+
     // PIDゲインの設定
     nvs_handle nvsHandle;
     ret = nvs_open("setting", NVS_READONLY, &nvsHandle);
@@ -517,6 +531,16 @@ extern "C" void app_main(void)
 
     char buf[64];
     notify_t notifyMsg;
+
+    //ファイルの確認
+    FILE *file = fopen("/storage/hello.txt", "rw");
+    if (file != NULL)
+    {   
+        char _buf[64];
+        fgets(_buf, sizeof(_buf), file);
+        ESP_LOGE("FAT", "%s", _buf);
+        fclose(file);
+    }
 
     while (1)
     {
