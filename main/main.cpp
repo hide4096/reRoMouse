@@ -8,100 +8,18 @@
 #include "nvs_flash.h"
 #include "esp_vfs.h"
 #include "esp_vfs_fat.h"
-
-#include "NeoPixel.hpp"
-#include "MPU6500.hpp"
-#include "PCA9632.hpp"
-#include "Buzzer.hpp"
-#include "Motor.hpp"
-#include "MA730.hpp"
 extern "C"
 {
 #include "nimble-nordic-uart.h"
 }
+
+#include "main.hpp"
 #include "sdkconfig.h"
 
-struct pid_gain_t
-{
-    float kp;
-    float ki;
-    float kd;
-};
-
-enum Mode
-{
-    GENERAL,
-    TRAJECT
-};
-
-struct orbit_t
-{
-    float x_acc;
-    float y_acc;
-};
-
-class driver_t
-{
-public:
-    MA730 *encL;
-    MA730 *encR;
-    MPU6500 *imu;
-    PCA9632 *led;
-    BUZZER *buzzer;
-    NeoPixel *np;
-    Motor *motor;
-
-    float tgt_vel;
-    float tgt_angvel;
-
-    Mode mode = GENERAL;
-    uint64_t tick;
-    bool enable;
-
-    pid_gain_t vel_gain;
-    pid_gain_t angvel_gain;
-    float ff_gain = 0;
-    float accelMax = 3.0;           // m/s/s
-    float angaccelMax = 20 * M_PI; // rad/s/s
-
-    orbit_t *orbit;
-    uint16_t orbit_size;
-};
-
 QueueHandle_t notify;
+QueueHandle_t routemap;
 const char *base_path = "/storage";
 static wl_handle_t wl_handle = WL_INVALID_HANDLE;
-
-struct voltage_t
-{
-    float voltageL;
-    float voltageR;
-};
-
-struct odometry_t
-{
-    float x;
-    float y;
-    float yaw;
-};
-
-struct tracking_t
-{
-    float x;
-    float y;
-    float dx;
-    float dy;
-    float xi;
-};
-
-struct notify_t
-{
-    voltage_t output_voltage;
-    voltage_t ff_voltage;
-    odometry_t odom;
-    float tgt_vel;
-    float tgt_angvel;
-};
 
 void control_1ms_task(void *pvparam)
 {
@@ -132,7 +50,10 @@ void control_1ms_task(void *pvparam)
     float ramp_tgt_vel = 0;
     float ramp_tgt_angvel = 0;
 
-    tracking_t tracking = {0, 0, 0, 0, 0};
+    float xi = 0;
+    float dxPast = 0;
+    float dyPast = 0;
+
     float Kx1 = 10;
     float Kx2 = 10;
     float Ky1 = 10;
@@ -155,7 +76,10 @@ void control_1ms_task(void *pvparam)
             driver->tick = 0;
             driver->tgt_vel = 0;
             driver->tgt_angvel = 0;
-            memset(&tracking, 0, sizeof(tracking_t));
+            xi = 0;
+            dxPast = 0;
+            dyPast = 0;
+
             memset(&odom, 0, sizeof(odometry_t));
             while (driver->enable == false)
             {
@@ -175,30 +99,35 @@ void control_1ms_task(void *pvparam)
         case GENERAL:
             break;
         case TRAJECT:
-            if (driver->tick >= driver->orbit_size)
+            if (driver->tick >= driver->orbit_size - 1)
             {
                 driver->enable = false;
                 break;
             }
 
             orbit_t _ob = driver->orbit[driver->tick];
+            orbit_t _obFuture = driver->orbit[driver->tick + 1];
+
+            float _dxTgt = (_obFuture.x - _ob.x) / 0.001;
+            float _dyTgt = (_obFuture.y - _ob.y) / 0.001;
+            float _ddxTgt = (_dxTgt - dxPast) / 0.001;
+            float _ddyTgt = (_dyTgt - dyPast) / 0.001;
 
             float _dx = vel * cos(odom.yaw);
             float _dy = vel * sin(odom.yaw);
 
-            float ux = _ob.x_acc + Kx1 * (tracking.dx - _dx) + Kx2 * (tracking.x - odom.x);
-            float uy = _ob.y_acc + Ky1 * (tracking.dy - _dy) + Ky2 * (tracking.y - odom.y);
+            float ux = _ddxTgt + Kx1 * (_dxTgt - _dx) + Kx2 * (_ob.x - odom.x);
+            float uy = _ddyTgt + Ky1 * (_dyTgt - _dy) + Ky2 * (_ob.y - odom.y);
             float dxi = ux * cos(odom.yaw) + uy * sin(odom.yaw);
+            
+            dxPast = _dxTgt;
+            dyPast = _dyTgt;
 
-            tracking.dx += _ob.x_acc * 0.001;
-            tracking.dy += _ob.y_acc * 0.001;
-            tracking.x += tracking.dx * 0.001;
-            tracking.y += tracking.dy * 0.001;
-            tracking.xi += dxi * 0.001;
+            xi += dxi * 0.001;
 
-            driver->tgt_vel = tracking.xi;
-            if(tracking.xi > 0.05)
-                driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / tracking.xi;
+            driver->tgt_vel = xi;
+            if(xi > 0.01)
+                driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / xi;
             else
                 driver->tgt_angvel = 0;
 
@@ -236,7 +165,7 @@ void control_1ms_task(void *pvparam)
         vel = (velL + velR) / 2;
 
         // 角度計算
-        angvel = (driver->imu->gyroZ() * (M_PI / 180.)) * -1.;
+        angvel = (driver->imu->gyroZ() * (M_PI / 180.));
         odom.yaw += angvel * 0.001;
 
         odom.x += vel * cos(odom.yaw) * 0.001;
@@ -516,6 +445,34 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
     }
 }
 
+inline void loadTraject(orbitBase_t *orbit,char* filename){
+    FILE *file = fopen(filename, "r");
+    if (file != NULL)
+    {
+        char _buf[64];
+        fgets(_buf, sizeof(_buf), file);
+        orbit->size = atoi(_buf);
+        orbit->orbit = (orbit_t *)malloc(sizeof(orbit_t) * orbit->size);
+        ESP_LOGI("FAT", "orbit_size: %d", orbit->size);
+        if (orbit->orbit == NULL)
+        {
+            ESP_LOGE("FAT", "malloc failed");
+        }
+        else
+        {
+            for (int i = 0; i < orbit->size; i++)
+            {
+                fgets(_buf, sizeof(_buf), file);
+                char *p = strtok(_buf, ",");
+                orbit->orbit[i].x = atof(p) / 1000;
+                p = strtok(NULL, ",");
+                orbit->orbit[i].y = atof(p) / 1000;
+            }
+            ESP_LOGI("FAT", "traject loaded");
+        }
+    }
+}
+
 extern "C" void app_main(void)
 {
     esp_err_t ret;
@@ -632,48 +589,8 @@ extern "C" void app_main(void)
     char buf[64];
     notify_t notifyMsg;
 
-    // ファイルの確認
-    FILE *file = fopen("/storage/hello.txt", "rw");
-    if (file != NULL)
-    {
-        char _buf[64];
-        fgets(_buf, sizeof(_buf), file);
-        ESP_LOGE("FAT", "%s", _buf);
-        fclose(file);
-    }
     // 軌道データの読み込み
-    file = fopen("/storage/traject.csv", "r");
-    if (file != NULL)
-    {
-        ESP_LOGI("FAT", "traject.csv found");
-        char _buf[64];
-        fgets(_buf, sizeof(_buf), file);
-        driver.orbit_size = atoi(_buf);
-        driver.orbit = (orbit_t *)malloc(sizeof(orbit_t) * driver.orbit_size);
-        ESP_LOGI("FAT", "orbit_size: %d", driver.orbit_size);
-        if (driver.orbit == NULL)
-        {
-            ESP_LOGE("FAT", "malloc failed");
-        }
-        else
-        {
-            for (int i = 0; i < driver.orbit_size; i++)
-            {
-                fgets(_buf, sizeof(_buf), file);
-                char *p = strtok(_buf, ",");
-                driver.orbit[i].x_acc = atof(p);
-                p = strtok(NULL, ",");
-                driver.orbit[i].y_acc = atof(p);
-            }
-            ESP_LOGI("FAT", "traject loaded");
-        }
-
-        /*
-        for(int i=0;i< driver.orbit_size;i++){
-            printf("%1.6f %1.6f\n", driver.orbit[i].x_acc, driver.orbit[i].y_acc);
-        }
-        */
-    }
+    loadTraject(&driver.slalom,"/storage/slalom90.csv");
 
     while (1)
     {
