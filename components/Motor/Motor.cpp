@@ -110,14 +110,14 @@ Motor::~Motor() {}
 
 void Motor::setMotorSpeed(float spdR, float spdL)
 {
-
+    // 左右モータの+-に注意
     if (spdR > 0)
     {
-        gpio_set_level(ph_pin_R, 1);
+        gpio_set_level(ph_pin_R, 0);
     }
     else
     {
-        gpio_set_level(ph_pin_R, 0);
+        gpio_set_level(ph_pin_R, 1);
         spdR = -spdR;
     }
     if (spdL > 0)

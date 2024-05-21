@@ -84,6 +84,8 @@ extern "C" void app_main(void)
     while (1)
     {
         MICROMOUSE(adc, EncR, EncL, buzzer, imu, led, motor);
+
+        //motor.setMotorSpeed((-0.3), -(0.3));
         /*h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();

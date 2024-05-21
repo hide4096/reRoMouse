@@ -394,6 +394,7 @@ void Motion::check_enkaigei()
 
     while (1)
     {
+        printf("Duty_L:%f    Duty_R:%f\n", control->Duty_l, control->Duty_r);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 

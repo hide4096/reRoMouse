@@ -16,7 +16,7 @@ void Test::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test::main_task()
 {   
-    control->log_flag = TRUE;
+    //control->log_flag = TRUE;
     motion.check_enkaigei(); // ok
     control->log_flag = FALSE;
     std::cout << "Test" << std::endl;
@@ -36,7 +36,7 @@ void Test2::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test2::main_task()
 {
-    control->log_flag = TRUE;
+    //control->log_flag = TRUE;
     val->sum.len = 0.0;
     motion.run_half();
     motion.run();
@@ -67,7 +67,7 @@ void Test3::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test3::main_task()
 {
-    control->log_flag = TRUE;
+    //control->log_flag = TRUE;
     motion.turn_left_2(); // ok
     control->log_flag = FALSE;
     std::cout << "Test3" << std::endl;
@@ -87,7 +87,7 @@ void Test4::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test4::main_task()
 {
-    control->log_flag = TRUE;
+    //control->log_flag = TRUE;
     motion.turn_right_2(); // ok
     control->log_flag = FALSE;
     std::cout << "Test4" << std::endl;
@@ -126,7 +126,7 @@ void Test6::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test6::main_task()
 {
-    control->log_flag = TRUE;
+    //control->log_flag = TRUE;
     motion.stop();  // OK
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
@@ -146,7 +146,7 @@ void Test7::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test7::main_task()
 {
-    control->log_flag = TRUE;
+    //control->log_flag = TRUE;
     motion.wall_check(); // OK
     control->log_flag = FALSE;
     std::cout << "Test3" << std::endl;

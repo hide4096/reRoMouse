@@ -120,23 +120,23 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
     //control.v.Kp = pid_gain.speed_Kp;
     //control.v.Ki = pid_gain.speed_Ki;
     //control.v.Kd = pid_gain.speed_Kd;
-    control.v.Kp = 5.0;
-    control.v.Ki = 500.0;
+    control.v.Kp = 50.0;
+    control.v.Ki = 100.0;
     control.v.Kd = 0.0;
 
     // 角速度制御
     //control.o.Kp = pid_gain.ang_vel_Kp;
     //control.o.Ki = pid_gain.ang_vel_Ki;
     //control.o.Kd = pid_gain.ang_vel_Kd;
-    control.o.Kp = 0.50;
-    control.o.Ki = 100.0;
+    control.o.Kp = 0.1;
+    control.o.Ki = 30.0;
     control.o.Kd = 0.0;
 
     // 壁制御
     //control.wall.Kp = pid_gain.wall_Kp;
     //control.wall.Ki = pid_gain.wall_Ki;
     //control.wall.Kd = pid_gain.wall_Kd;
-    control.wall.Kp = 0.005;
+    control.wall.Kp = 0.0;
     control.wall.Ki = 0.0;
     control.wall.Kd = 0.0;
 
@@ -200,7 +200,7 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
             mode_select(&mode, motion, &sens, &val, &control, &map);
             control.flag = FALSE;
         }*/
-        if (time_count > 3000)
+        if (time_count > 500)
         {
             led.set(0b1111);
             sens.gyro.ref = imu.surveybias(2000);
@@ -237,10 +237,10 @@ void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
         }
         //printf("time:%d\n", control.time_count);
         //printf("vel:%f\n", val.current.vel);
-        //printf("rad:%f\n", val.current.rad);
+        printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        printf("time:%d  mode:%d  vel:%lf  rad:%lf\n", time_count, mode, val.current.vel, val.current.rad);
+        //printf("time:%d  mode:%d  flag:%d  Duty_L:%lf  Duty_R:%lf  Batt:%lf\n", time_count, mode, control.flag ,control.Duty_l, control.Duty_r, sens.BatteryVoltage);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);
     }
