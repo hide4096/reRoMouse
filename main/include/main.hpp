@@ -29,6 +29,14 @@ enum Direction
     WEST
 };
 
+enum Turn
+{
+    LEFT = -1,
+    RIGHT = 1,
+    STRAIGHT = 0,
+    BACK = 2
+};
+
 struct orbit_t
 {
     float x;
@@ -37,8 +45,15 @@ struct orbit_t
 
 struct orbitBase_t
 {
-    int size;
     orbit_t *orbit;
+    uint16_t size;
+    Turn turn;
+};
+
+struct routemap_t
+{
+    orbitBase_t* path;
+    bool isReverse;
 };
 
 class driver_t
@@ -91,13 +106,6 @@ struct notify_t
     odometry_t odom;
     float tgt_vel;
     float tgt_angvel;
-};
-
-struct routemap_t
-{
-    orbitBase_t *orbit;
-    Direction direction;
-    bool isReverse;
 };
 
 #endif

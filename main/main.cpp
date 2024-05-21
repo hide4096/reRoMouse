@@ -51,14 +51,21 @@ void control_1ms_task(void *pvparam)
     float ramp_tgt_angvel = 0;
 
     float xi = 0;
+    int direction = NORTH;
     float dxPast = 0;
     float dyPast = 0;
+    float _origin_x = 0;
+    float _origin_y = 0;
+    int tickTraject = 0;
 
     float Kx1 = 10;
     float Kx2 = 10;
     float Ky1 = 10;
     float Ky2 = 10;
+
     driver->tick = 0;
+    routemap_t nextRoute;
+    nextRoute.path = NULL;
 
     while (1)
     {
@@ -76,9 +83,14 @@ void control_1ms_task(void *pvparam)
             driver->tick = 0;
             driver->tgt_vel = 0;
             driver->tgt_angvel = 0;
+            _origin_x = 0;
+            _origin_y = 0;
             xi = 0;
             dxPast = 0;
             dyPast = 0;
+            tickTraject = 0;
+            nextRoute.path = NULL;
+            direction = NORTH;
 
             memset(&odom, 0, sizeof(odometry_t));
             while (driver->enable == false)
@@ -99,40 +111,94 @@ void control_1ms_task(void *pvparam)
         case GENERAL:
             break;
         case TRAJECT:
-            if (driver->tick >= driver->orbit_size - 1)
+            if (nextRoute.path == NULL)
             {
-                driver->enable = false;
+                if (xQueueReceive(routemap, &nextRoute, 0) == pdTRUE)
+                {
+                    if (nextRoute.isReverse)
+                    {
+                        direction = (direction - nextRoute.path->turn) % 4;
+                    }
+                    else
+                    {
+                        direction = (direction + nextRoute.path->turn) % 4;
+                    }
+                }
+                else
+                {
+                    driver->enable = false;
+                    break;
+                }
+            }
+
+            orbit_t _ob = nextRoute.path->orbit[tickTraject];
+            orbit_t _obFuture = nextRoute.path->orbit[tickTraject + 1];
+
+            float ob_x = _origin_x;
+            float ob_y = _origin_y;
+            float obFuture_x = _origin_x;
+            float obFuture_y = _origin_y;
+            switch (direction)
+            {
+            default:
+            case NORTH:
+                ob_x += _ob.x;
+                ob_y += _ob.y;
+                obFuture_x += _obFuture.x;
+                obFuture_y += _obFuture.y;
+                break;
+            case EAST:
+                ob_x += _ob.y;
+                ob_y += _ob.x;
+                obFuture_x += _obFuture.y;
+                obFuture_y += _obFuture.x;
+                break;
+            case SOUTH:
+                ob_x -= _ob.x;
+                ob_y -= _ob.y;
+                obFuture_x -= _obFuture.x;
+                obFuture_y -= _obFuture.y;
+                break;
+            case WEST:
+                ob_x -= _ob.y;
+                ob_y -= _ob.x;
+                obFuture_x -= -_obFuture.y;
+                obFuture_y -= _obFuture.x;
                 break;
             }
 
-            orbit_t _ob = driver->orbit[driver->tick];
-            orbit_t _obFuture = driver->orbit[driver->tick + 1];
-
-            float _dxTgt = (_obFuture.x - _ob.x) / 0.001;
-            float _dyTgt = (_obFuture.y - _ob.y) / 0.001;
+            float _dxTgt = (obFuture_x - ob_x) / 0.001;
+            float _dyTgt = (obFuture_y - ob_y) / 0.001;
             float _ddxTgt = (_dxTgt - dxPast) / 0.001;
             float _ddyTgt = (_dyTgt - dyPast) / 0.001;
 
             float _dx = vel * cos(odom.yaw);
             float _dy = vel * sin(odom.yaw);
 
-            float ux = _ddxTgt + Kx1 * (_dxTgt - _dx) + Kx2 * (_ob.x - odom.x);
-            float uy = _ddyTgt + Ky1 * (_dyTgt - _dy) + Ky2 * (_ob.y - odom.y);
+            float ux = _ddxTgt + Kx1 * (_dxTgt - _dx) + Kx2 * (ob_x - odom.x);
+            float uy = _ddyTgt + Ky1 * (_dyTgt - _dy) + Ky2 * (ob_y - odom.y);
             float dxi = ux * cos(odom.yaw) + uy * sin(odom.yaw);
-            
+
             dxPast = _dxTgt;
             dyPast = _dyTgt;
 
             xi += dxi * 0.001;
 
             driver->tgt_vel = xi;
-            if(xi > 0.01)
+            if (xi > 0.01)
                 driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / xi;
             else
                 driver->tgt_angvel = 0;
 
-            //ESP_LOGI("traject", "%.3f %.3f %.3f %.3f %.3f", ux, uy, sin(odom.yaw), cos(odom.yaw), tracking.xi);
-
+            // ESP_LOGI("traject", "%.3f %.3f %.3f %.3f %.3f", ux, uy, sin(odom.yaw), cos(odom.yaw), tracking.xi);
+            tickTraject++;
+            if(tickTraject >= nextRoute.path->size - 1)
+            {
+                tickTraject = 0;
+                _origin_x = obFuture_x;
+                _origin_y = obFuture_y;
+                nextRoute.path = NULL;
+            }
             break;
         }
 
@@ -148,13 +214,13 @@ void control_1ms_task(void *pvparam)
 
         // 速度計算
         if (diff_encL > HALF_RES)
-            diff_encL -= RESOLUTION - 1;
+            diff_encL -= RESOLUTION;
         if (diff_encR > HALF_RES)
-            diff_encR -= RESOLUTION - 1;
+            diff_encR -= RESOLUTION;
         if (diff_encL < -HALF_RES)
-            diff_encL += RESOLUTION - 1;
+            diff_encL += RESOLUTION;
         if (diff_encR < -HALF_RES)
-            diff_encR += RESOLUTION - 1;
+            diff_encR += RESOLUTION;
 
         float lenL = diff_encL * PULSE2RAD;
         float lenR = diff_encR * PULSE2RAD;
@@ -238,20 +304,6 @@ void control_1ms_task(void *pvparam)
     }
 }
 
-bool nordic_uart_connected = false;
-void onStatusChanged(nordic_uart_callback_type callback_type)
-{
-    switch (callback_type)
-    {
-    case NORDIC_UART_CONNECTED:
-        nordic_uart_connected = true;
-        break;
-    case NORDIC_UART_DISCONNECTED:
-        nordic_uart_connected = false;
-        break;
-    }
-}
-
 driver_t driver;
 
 inline void parse_command(char *input, char *output, int size)
@@ -285,7 +337,16 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
 
     if (memcmp(command, "run", 3) == 0)
     {
-        if(memcmp(option, "traject", 7) == 0){
+        if (memcmp(option, "traject", 7) == 0)
+        {
+            routemap_t route;
+            route.path = &driver.start;
+            route.isReverse = false;
+            xQueueSend(routemap, &route, 0);
+            route.path = &driver.slalom;
+            xQueueSend(routemap, &route, 0);
+            route.path = &driver.stop;
+            xQueueSend(routemap, &route, 0);
             driver.mode = TRAJECT;
             nordic_uart_sendln("traject");
         }
@@ -443,9 +504,12 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         driver.np->show();
         nordic_uart_sendln("success");
     }
+
+    nordic_uart_sendln("invalid command");
 }
 
-inline void loadTraject(orbitBase_t *orbit,char* filename){
+inline void loadTraject(orbitBase_t *orbit, char *filename, Turn turn)
+{
     FILE *file = fopen(filename, "r");
     if (file != NULL)
     {
@@ -469,7 +533,14 @@ inline void loadTraject(orbitBase_t *orbit,char* filename){
                 orbit->orbit[i].y = atof(p) / 1000;
             }
             ESP_LOGI("FAT", "traject loaded");
+            orbit->turn = turn;
         }
+    }
+    else
+    {
+        ESP_LOGE("FAT", "Failed to open %s", filename);
+        orbit->orbit = NULL;
+        orbit->size = 0;
     }
 }
 
@@ -513,7 +584,7 @@ extern "C" void app_main(void)
     }
 
     // BLEの初期化
-    nordic_uart_start("reRoMouse", onStatusChanged);
+    nordic_uart_start("reRoMouse", NULL);
     nordic_uart_yield(onRecieved);
 
     // IMU SPIバスの設定
@@ -587,17 +658,20 @@ extern "C" void app_main(void)
     driver.tgt_angvel = 0;
 
     char buf[64];
-    notify_t notifyMsg;
 
     // 軌道データの読み込み
-    loadTraject(&driver.slalom,"/storage/slalom90.csv");
+    routemap = xQueueCreate(5, sizeof(routemap_t));
+    loadTraject(&driver.slalom, "/storage/slalom90.csv", LEFT);
+    loadTraject(&driver.start, "/storage/start.csv", STRAIGHT);
+    loadTraject(&driver.stop, "/storage/stop.csv", STRAIGHT);
 
     while (1)
     {
         if (driver.enable)
         {
+            notify_t notifyMsg;
             xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
-            sprintf(buf,"%3.3f %3.3f",notifyMsg.tgt_vel,notifyMsg.tgt_angvel);
+            sprintf(buf, "X:%3.3fcm Y:%3.3fcm Yaw:%3.3f", notifyMsg.odom.x * 100, notifyMsg.odom.y * 100, notifyMsg.odom.yaw * 180 / M_PI);
             nordic_uart_sendln(buf);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
