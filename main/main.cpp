@@ -51,7 +51,7 @@ void control_1ms_task(void *pvparam)
     float ramp_tgt_angvel = 0;
 
     float xi = 0;
-    int direction = NORTH;
+    uint8_t direction = NORTH;
     float dxPast = 0;
     float dyPast = 0;
     float _origin_x = 0;
@@ -91,6 +91,8 @@ void control_1ms_task(void *pvparam)
             tickTraject = 0;
             nextRoute.path = NULL;
             direction = NORTH;
+            xQueueReset(routemap);
+            xQueueReset(notify);
 
             memset(&odom, 0, sizeof(odometry_t));
             while (driver->enable == false)
@@ -127,32 +129,37 @@ void control_1ms_task(void *pvparam)
             float ob_y = _origin_y;
             float obFuture_x = _origin_x;
             float obFuture_y = _origin_y;
+
+            float reverse = 1;
+            if (nextRoute.isReverse)
+                reverse = -1;
+
             switch (direction)
             {
             default:
             case NORTH:
                 ob_x += _ob.x;
-                ob_y += _ob.y;
+                ob_y += _ob.y * reverse;
                 obFuture_x += _obFuture.x;
-                obFuture_y += _obFuture.y;
+                obFuture_y += _obFuture.y * reverse;
                 break;
             case EAST:
-                ob_x += _ob.y;
-                ob_y += _ob.x;
-                obFuture_x += _obFuture.y;
-                obFuture_y += _obFuture.x;
+                ob_x += _ob.y * reverse;
+                ob_y -= _ob.x;
+                obFuture_x += _obFuture.y * reverse;
+                obFuture_y -= _obFuture.x;
                 break;
             case SOUTH:
                 ob_x -= _ob.x;
-                ob_y -= _ob.y;
+                ob_y -= _ob.y * reverse;
                 obFuture_x -= _obFuture.x;
-                obFuture_y -= _obFuture.y;
+                obFuture_y -= _obFuture.y * reverse;
                 break;
             case WEST:
-                ob_x -= _ob.y;
-                ob_y -= _ob.x;
-                obFuture_x -= -_obFuture.y;
-                obFuture_y -= _obFuture.x;
+                ob_x -= _ob.y * reverse;
+                ob_y += _ob.x;
+                obFuture_x -= _obFuture.y * reverse;
+                obFuture_y += _obFuture.x;
                 break;
             }
 
@@ -180,6 +187,7 @@ void control_1ms_task(void *pvparam)
                 driver->tgt_angvel = 0;
 
             // ESP_LOGI("traject", "%.3f %.3f %.3f %.3f %.3f", ux, uy, sin(odom.yaw), cos(odom.yaw), tracking.xi);
+            notifyMsg.direction = direction;
             tickTraject++;
             if (tickTraject >= nextRoute.path->size - 1)
             {
@@ -188,11 +196,11 @@ void control_1ms_task(void *pvparam)
                 _origin_y = obFuture_y;
                 if (nextRoute.isReverse)
                 {
-                    direction = (direction - nextRoute.path->turn) % 4;
+                    direction = (direction - nextRoute.path->turn + 4) % 4;
                 }
                 else
                 {
-                    direction = (direction + nextRoute.path->turn) % 4;
+                    direction = (direction + nextRoute.path->turn + 4) % 4;
                 }
                 nextRoute.path = NULL;
             }
@@ -270,7 +278,7 @@ void control_1ms_task(void *pvparam)
         float diff_vel = (past_vel - vel) / 0.001;
         integral_velError += velError * 0.001;
 
-        float angvelError = ramp_tgt_angvel - angvel;
+        float angvelError = angvel - ramp_tgt_angvel;
         float diff_angvel = (past_angvel - angvel) / 0.001;
         integral_angvelError += angvelError * 0.001;
 
@@ -342,8 +350,13 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
             xQueueSend(routemap, &route, 0);
             route.path = &driver.slalom;
             xQueueSend(routemap, &route, 0);
+            route.path = &driver.straight;
+            xQueueSend(routemap, &route, 0);
+            route.path = &driver.slalom;
+            xQueueSend(routemap, &route, 0);
             route.path = &driver.stop;
             xQueueSend(routemap, &route, 0);
+
             driver.mode = TRAJECT;
             nordic_uart_sendln("traject");
         }
@@ -661,6 +674,7 @@ extern "C" void app_main(void)
     loadTraject(&driver.slalom, "/storage/slalom90.csv", LEFT);
     loadTraject(&driver.start, "/storage/start.csv", STRAIGHT);
     loadTraject(&driver.stop, "/storage/stop.csv", STRAIGHT);
+    loadTraject(&driver.straight, "/storage/straight.csv", STRAIGHT);
 
     while (1)
     {
@@ -668,7 +682,7 @@ extern "C" void app_main(void)
         {
             notify_t notifyMsg;
             xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
-            sprintf(buf, "X:%3.3fcm Y:%3.3fcm Yaw:%3.3f", notifyMsg.odom.x * 100, notifyMsg.odom.y * 100, notifyMsg.odom.yaw * 180 / M_PI);
+            sprintf(buf, "%3.3f %3.3f %d", notifyMsg.odom.x, notifyMsg.odom.y, notifyMsg.direction);
             nordic_uart_sendln(buf);
             vTaskDelay(pdMS_TO_TICKS(100));
         }

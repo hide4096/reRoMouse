@@ -84,6 +84,7 @@ public:
     orbitBase_t slalom;
     orbitBase_t start;
     orbitBase_t stop;
+    orbitBase_t straight;
 };
 
 struct voltage_t
@@ -106,6 +107,7 @@ struct notify_t
     odometry_t odom;
     float tgt_vel;
     float tgt_angvel;
+    uint8_t direction;
 };
 
 #endif
