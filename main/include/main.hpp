@@ -15,6 +15,14 @@ struct pid_gain_t
     float kd;
 };
 
+struct trace_gain_t
+{
+    float kx1;
+    float kx2;
+    float ky1;
+    float ky2;
+};
+
 enum Mode
 {
     GENERAL,
@@ -52,8 +60,9 @@ struct orbitBase_t
 
 struct routemap_t
 {
-    orbitBase_t* path;
+    orbitBase_t *path;
     bool isReverse;
+    uint8_t divide;
 };
 
 class driver_t
@@ -76,10 +85,11 @@ public:
 
     pid_gain_t vel_gain;
     pid_gain_t angvel_gain;
+    trace_gain_t trace_gain = {0.1, 0.1, 0.1, 0.1};
 
-    float ff_gain = 0;
-    float accelMax = 3.0;           // m/s/s
-    float angaccelMax = 20 * M_PI;  // rad/s/s
+    float ff_gain = 100;
+    float accelMax = 3.0;          // m/s/s
+    float angaccelMax = 20 * M_PI; // rad/s/s
 
     orbitBase_t slalom;
     orbitBase_t start;
@@ -111,4 +121,3 @@ struct notify_t
 };
 
 #endif
-

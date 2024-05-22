@@ -58,11 +58,6 @@ void control_1ms_task(void *pvparam)
     float _origin_y = 0;
     int tickTraject = 0;
 
-    float Kx1 = 10;
-    float Kx2 = 10;
-    float Ky1 = 10;
-    float Ky2 = 10;
-
     driver->tick = 0;
     routemap_t nextRoute;
     nextRoute.path = NULL;
@@ -122,8 +117,11 @@ void control_1ms_task(void *pvparam)
                 }
             }
 
-            orbit_t _ob = nextRoute.path->orbit[tickTraject];
-            orbit_t _obFuture = nextRoute.path->orbit[tickTraject + 1];
+            orbit_t _ob = nextRoute.path->orbit[tickTraject * nextRoute.divide];
+            int _obFutureIndex = (tickTraject + 1) * nextRoute.divide;
+            if (_obFutureIndex >= nextRoute.path->size)
+                _obFutureIndex = nextRoute.path->size - 1;
+            orbit_t _obFuture = nextRoute.path->orbit[_obFutureIndex];
 
             float ob_x = _origin_x;
             float ob_y = _origin_y;
@@ -171,8 +169,8 @@ void control_1ms_task(void *pvparam)
             float _dx = vel * cos(odom.yaw);
             float _dy = vel * sin(odom.yaw);
 
-            float ux = _ddxTgt + Kx1 * (_dxTgt - _dx) + Kx2 * (ob_x - odom.x);
-            float uy = _ddyTgt + Ky1 * (_dyTgt - _dy) + Ky2 * (ob_y - odom.y);
+            float ux = _ddxTgt + driver->trace_gain.kx1 * (_dxTgt - _dx) + driver->trace_gain.kx2 * (ob_x - odom.x);
+            float uy = _ddyTgt + driver->trace_gain.ky1 * (_dyTgt - _dy) + driver->trace_gain.ky2 * (ob_y - odom.y);
             float dxi = ux * cos(odom.yaw) + uy * sin(odom.yaw);
 
             dxPast = _dxTgt;
@@ -181,7 +179,7 @@ void control_1ms_task(void *pvparam)
             xi += dxi * 0.001;
 
             driver->tgt_vel = xi;
-            if (xi > 0.01)
+            if (xi > 0.05)
                 driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / xi;
             else
                 driver->tgt_angvel = 0;
@@ -189,7 +187,8 @@ void control_1ms_task(void *pvparam)
             // ESP_LOGI("traject", "%.3f %.3f %.3f %.3f %.3f", ux, uy, sin(odom.yaw), cos(odom.yaw), tracking.xi);
             notifyMsg.direction = direction;
             tickTraject++;
-            if (tickTraject >= nextRoute.path->size - 1)
+
+            if (tickTraject * nextRoute.divide >= nextRoute.path->size - 1)
             {
                 tickTraject = 0;
                 _origin_x = obFuture_x;
@@ -347,14 +346,16 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
             routemap_t route;
             route.path = &driver.start;
             route.isReverse = false;
-            xQueueSend(routemap, &route, 0);
+            route.divide = atoi(argument);
             route.path = &driver.slalom;
             xQueueSend(routemap, &route, 0);
             route.path = &driver.straight;
             xQueueSend(routemap, &route, 0);
             route.path = &driver.slalom;
+            route.isReverse = true;
             xQueueSend(routemap, &route, 0);
             route.path = &driver.stop;
+            route.isReverse = false;
             xQueueSend(routemap, &route, 0);
 
             driver.mode = TRAJECT;
@@ -398,6 +399,8 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         {
             nvs_set_blob(nvsHandle, "vel_gain", &driver.vel_gain, sizeof(pid_gain_t));
             nvs_set_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, sizeof(pid_gain_t));
+            nvs_set_blob(nvsHandle, "trace", &driver.trace_gain, sizeof(trace_gain_t));
+            nvs_set_blob(nvsHandle, "ff_gain", &driver.ff_gain, sizeof(float));
             nvs_commit(nvsHandle);
             nvs_close(nvsHandle);
             nordic_uart_sendln("success");
@@ -417,6 +420,8 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
             size_t size = sizeof(pid_gain_t);
             nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size);
             nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size);
+            nvs_get_blob(nvsHandle, "trace", &driver.trace_gain, &size);
+            nvs_get_blob(nvsHandle, "ff_gain", &driver.ff_gain, &size);
             nvs_close(nvsHandle);
             nordic_uart_sendln("success");
         }
@@ -431,6 +436,10 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         sprintf(buf, "vel_gain: %.3f %.3f %.3f", driver.vel_gain.kp, driver.vel_gain.ki, driver.vel_gain.kd);
         nordic_uart_sendln(buf);
         sprintf(buf, "angvel_gain: %.3f %.3f %.3f", driver.angvel_gain.kp, driver.angvel_gain.ki, driver.angvel_gain.kd);
+        nordic_uart_sendln(buf);
+        sprintf(buf, "trace: %.3f %.3f %.3f %.3f", driver.trace_gain.kx1, driver.trace_gain.kx2, driver.trace_gain.ky1, driver.trace_gain.ky2);
+        nordic_uart_sendln(buf);
+        sprintf(buf, "ff_gain: %.3f", driver.ff_gain);
         nordic_uart_sendln(buf);
         return;
     }
@@ -490,6 +499,32 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
     else if (memcmp(command, "ff", 2) == 0)
     {
         driver.ff_gain = atof(option);
+        nordic_uart_sendln("success");
+        return;
+    }
+    else if (memcmp(command, "trace", 5) == 0)
+    {
+        if (memcmp(option, "kx1", 3) == 0)
+        {
+            driver.trace_gain.kx1 = atof(argument);
+        }
+        else if (memcmp(option, "kx2", 3) == 0)
+        {
+            driver.trace_gain.kx2 = atof(argument);
+        }
+        else if (memcmp(option, "ky1", 3) == 0)
+        {
+            driver.trace_gain.ky1 = atof(argument);
+        }
+        else if (memcmp(option, "ky2", 3) == 0)
+        {
+            driver.trace_gain.ky2 = atof(argument);
+        }
+        else
+        {
+            nordic_uart_sendln("invalid option");
+            return;
+        }
         nordic_uart_sendln("success");
         return;
     }
@@ -585,12 +620,16 @@ extern "C" void app_main(void)
     {
         nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size);
         nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size);
+        nvs_get_blob(nvsHandle, "trace", &driver.trace_gain, &size);
+        nvs_get_blob(nvsHandle, "ff_gain", &driver.ff_gain, &size);
         nvs_close(nvsHandle);
     }
     else
     {
         driver.vel_gain = {0.0, 0.0, 0.0};
         driver.angvel_gain = {0.0, 0.0, 0.0};
+        driver.trace_gain = {0.1, 0.1, 0.1, 0.1};
+        driver.ff_gain = 0.0;
     }
 
     // BLEの初期化
@@ -670,7 +709,7 @@ extern "C" void app_main(void)
     char buf[64];
 
     // 軌道データの読み込み
-    routemap = xQueueCreate(5, sizeof(routemap_t));
+    routemap = xQueueCreate(20, sizeof(routemap_t));
     loadTraject(&driver.slalom, "/storage/slalom90.csv", LEFT);
     loadTraject(&driver.start, "/storage/start.csv", STRAIGHT);
     loadTraject(&driver.stop, "/storage/stop.csv", STRAIGHT);
