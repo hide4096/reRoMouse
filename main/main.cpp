@@ -417,11 +417,13 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         esp_err_t ret = nvs_open("setting", NVS_READONLY, &nvsHandle);
         if (ret == ESP_OK)
         {
-            size_t size = sizeof(pid_gain_t);
-            nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size);
-            nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size);
-            nvs_get_blob(nvsHandle, "trace", &driver.trace_gain, &size);
-            nvs_get_blob(nvsHandle, "ff_gain", &driver.ff_gain, &size);
+            size_t size_pid = sizeof(pid_gain_t);
+            size_t size_trace = sizeof(trace_gain_t);
+            size_t size_ff = sizeof(float);
+            nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size_pid);
+            nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size_pid);
+            nvs_get_blob(nvsHandle, "trace", &driver.trace_gain, &size_trace);
+            nvs_get_blob(nvsHandle, "ff_gain", &driver.ff_gain, &size_ff);
             nvs_close(nvsHandle);
             nordic_uart_sendln("success");
         }
@@ -615,13 +617,15 @@ extern "C" void app_main(void)
     // PIDゲインの設定
     nvs_handle nvsHandle;
     ret = nvs_open("setting", NVS_READONLY, &nvsHandle);
-    size_t size = sizeof(pid_gain_t);
+    size_t size_pid = sizeof(pid_gain_t);
+    size_t size_trace = sizeof(trace_gain_t);
+    size_t size_ff = sizeof(float);
     if (ret == ESP_OK)
     {
-        nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size);
-        nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size);
-        nvs_get_blob(nvsHandle, "trace", &driver.trace_gain, &size);
-        nvs_get_blob(nvsHandle, "ff_gain", &driver.ff_gain, &size);
+        nvs_get_blob(nvsHandle, "vel_gain", &driver.vel_gain, &size_pid);
+        nvs_get_blob(nvsHandle, "angvel_gain", &driver.angvel_gain, &size_pid);
+        nvs_get_blob(nvsHandle, "trace", &driver.trace_gain, &size_trace);
+        nvs_get_blob(nvsHandle, "ff_gain", &driver.ff_gain, &size_ff);
         nvs_close(nvsHandle);
     }
     else
