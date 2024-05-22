@@ -113,18 +113,7 @@ void control_1ms_task(void *pvparam)
         case TRAJECT:
             if (nextRoute.path == NULL)
             {
-                if (xQueueReceive(routemap, &nextRoute, 0) == pdTRUE)
-                {
-                    if (nextRoute.isReverse)
-                    {
-                        direction = (direction - nextRoute.path->turn) % 4;
-                    }
-                    else
-                    {
-                        direction = (direction + nextRoute.path->turn) % 4;
-                    }
-                }
-                else
+                if (xQueueReceive(routemap, &nextRoute, 0) != pdTRUE)
                 {
                     driver->enable = false;
                     break;
@@ -192,11 +181,19 @@ void control_1ms_task(void *pvparam)
 
             // ESP_LOGI("traject", "%.3f %.3f %.3f %.3f %.3f", ux, uy, sin(odom.yaw), cos(odom.yaw), tracking.xi);
             tickTraject++;
-            if(tickTraject >= nextRoute.path->size - 1)
+            if (tickTraject >= nextRoute.path->size - 1)
             {
                 tickTraject = 0;
                 _origin_x = obFuture_x;
                 _origin_y = obFuture_y;
+                if (nextRoute.isReverse)
+                {
+                    direction = (direction - nextRoute.path->turn) % 4;
+                }
+                else
+                {
+                    direction = (direction + nextRoute.path->turn) % 4;
+                }
                 nextRoute.path = NULL;
             }
             break;
