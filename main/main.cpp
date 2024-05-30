@@ -8,6 +8,7 @@
 #include "nvs_flash.h"
 #include "esp_vfs.h"
 #include "esp_vfs_fat.h"
+#include "esp_heap_caps.h"
 extern "C"
 {
 #include "nimble-nordic-uart.h"
@@ -391,6 +392,13 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
         return;
     }
 
+    if (memcmp(command, "memory", 6) == 0)
+    {
+        sprintf(buf, "%d", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+        nordic_uart_sendln(buf);
+        return;
+    }
+
     if (memcmp(command, "push", 4) == 0)
     {
         nvs_handle nvsHandle;
@@ -594,6 +602,7 @@ inline void loadTraject(orbitBase_t *orbit, char *filename, Turn turn)
 extern "C" void app_main(void)
 {
     esp_err_t ret;
+    ESP_LOGW("memory","%d",heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
 
     // NVSの初期化
     ret = nvs_flash_init();
