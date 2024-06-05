@@ -120,6 +120,17 @@ struct notify_t
     float tgt_vel;
     float tgt_angvel;
     uint8_t direction;
+    uint16_t wallsens[4];
+};
+
+struct wallsensor_t
+{
+    //FR L R FL
+    uint16_t value[4];
+    uint16_t charge_us = 5;
+    uint16_t rise_us = 15;
+    const uint8_t SENS[4] = {0, 7, 1, 6};
+    const gpio_num_t LED[4] = {GPIO_NUM_21, GPIO_NUM_10, GPIO_NUM_18, GPIO_NUM_17};
 };
 
 #endif

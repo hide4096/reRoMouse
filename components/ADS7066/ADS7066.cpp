@@ -4,7 +4,7 @@ ADS7066::ADS7066(spi_host_device_t bus, gpio_num_t cs)
 {
     // デバイスの初期化
     memset(&dev_adc, 0, sizeof(dev_adc));
-    dev_adc.clock_speed_hz = 10 * 1000 * 1000;
+    dev_adc.clock_speed_hz = 60 * 1000 * 1000;
     dev_adc.mode = 0;
     dev_adc.spics_io_num = cs;
     dev_adc.queue_size = 4;

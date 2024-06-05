@@ -46,6 +46,8 @@ void control_1ms_task(void *pvparam)
     voltage_t volt = {0, 0};
     voltage_t ff_volt = {0, 0};
 
+    wallsensor_t wall;
+
     notify_t notifyMsg;
 
     float ramp_tgt_vel = 0;
@@ -63,8 +65,26 @@ void control_1ms_task(void *pvparam)
     routemap_t nextRoute;
     nextRoute.path = NULL;
 
+    for (int i = 0; i < 4; i++)
+    {
+        gpio_set_level(wall.LED[i], 1);
+    }
+
     while (1)
     {
+        // 壁センサ読む
+        driver->adc->readOnTheFly(wall.SENS[0]);
+        for (int i = 0; i < 4; i++)
+        {
+            uint16_t _off = driver->adc->readOnTheFly(wall.SENS[i]);
+            gpio_set_level(wall.LED[i], 0);
+            esp_rom_delay_us(wall.charge_us);
+            gpio_set_level(wall.LED[i], 1);
+            esp_rom_delay_us(wall.rise_us);
+            uint16_t _on = driver->adc->readOnTheFly(wall.SENS[(i + 1) % 4]);
+            wall.value[i] = _on;
+        }
+
         if (driver->enable == false)
         {
             driver->motor->setMotorSpeed(0, 0);
@@ -300,6 +320,7 @@ void control_1ms_task(void *pvparam)
         notifyMsg.odom = odom;
         notifyMsg.tgt_vel = driver->tgt_vel;
         notifyMsg.tgt_angvel = driver->tgt_angvel;
+        memcpy(notifyMsg.wallsens, wall.value, sizeof(uint16_t) * 4);
         xQueueSend(notify, &notifyMsg, 0);
 
         driver->motor->setMotorSpeed((volt.voltageL + ff_volt.voltageL) / voltage, (volt.voltageR + ff_volt.voltageR) / voltage);
@@ -738,31 +759,43 @@ extern "C" void app_main(void)
     loadTraject(&driver.start, "/storage/start.csv", STRAIGHT);
     loadTraject(&driver.stop, "/storage/stop.csv", STRAIGHT);
     loadTraject(&driver.straight, "/storage/straight.csv", STRAIGHT);
-    gpio_set_level(GPIO_NUM_21,1);
-
+    gpio_set_level(GPIO_NUM_21, 1);
+    notify_t notifyMsg;
+    wallsensor_t wall;
+    wall.charge_us = 100;
+    for (int i = 0; i < 4; i++)
+    {
+        gpio_set_level(wall.LED[i], 1);
+    }
     while (1)
     {
         if (driver.enable)
         {
-            notify_t notifyMsg;
             xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
-            sprintf(buf, "%3.3f %3.3f %d", notifyMsg.odom.x, notifyMsg.odom.y, notifyMsg.direction);
+            // sprintf(buf, "%3.3f %3.3f %d", notifyMsg.odom.x, notifyMsg.odom.y, notifyMsg.direction);
+            sprintf(buf, "%05d %05d %05d %05d", notifyMsg.wallsens[0], notifyMsg.wallsens[1], notifyMsg.wallsens[2], notifyMsg.wallsens[3]);
             nordic_uart_sendln(buf);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
         else
-        {   
-            gpio_set_level(GPIO_NUM_17,0);
-            esp_rom_delay_us(800);
-            gpio_set_level(GPIO_NUM_17,1);
-
-            sprintf(buf, "%6d %6d %6d %6d %6d",
-                    driver.adc->readOnTheFly(1),
-                    driver.adc->readOnTheFly(6),
-                    driver.adc->readOnTheFly(7),
-                    driver.adc->readOnTheFly(4),
-                    driver.adc->readOnTheFly(0));
-
+        {
+            uint16_t _on, _off;
+            driver.adc->readOnTheFly(wall.SENS[0]);
+            for (int i = 0; i < 4; i++)
+            {
+                if (i > 0)
+                    _on = driver.adc->readOnTheFly(wall.SENS[i]);
+                gpio_set_level(wall.LED[i], 0);
+                esp_rom_delay_us(wall.charge_us);
+                gpio_set_level(wall.LED[i], 1);
+                esp_rom_delay_us(wall.rise_us);
+                if (i > 0)
+                    wall.value[i - 1] = _on - _off;
+                _off = driver.adc->readOnTheFly(wall.SENS[i]);
+            }
+            _on = driver.adc->readOnTheFly(-1);
+            wall.value[3] = _on - _off;
+            sprintf(buf, "%05d %05d %05d %05d", wall.value[0], wall.value[2], wall.value[1], wall.value[3]);
             nordic_uart_sendln(buf);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
