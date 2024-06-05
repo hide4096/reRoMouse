@@ -394,7 +394,7 @@ static void onRecieved(struct ble_gatt_access_ctxt *ctxt)
 
     if (memcmp(command, "memory", 6) == 0)
     {
-        sprintf(buf, "%d", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+        sprintf(buf, "%d", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
         nordic_uart_sendln(buf);
         return;
     }
@@ -601,8 +601,18 @@ inline void loadTraject(orbitBase_t *orbit, char *filename, Turn turn)
 
 extern "C" void app_main(void)
 {
+    gpio_config_t io_conf = {};
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask =
+        (1ULL << 10) | (1ULL << 17) | (1ULL << 18) | (1ULL << 21);
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+
     esp_err_t ret;
-    ESP_LOGW("memory","%d",heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    ESP_LOGW("memory", "%d", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
 
     // NVSの初期化
     ret = nvs_flash_init();
@@ -652,14 +662,15 @@ extern "C" void app_main(void)
     // IMU SPIバスの設定
     spi_bus_config_t bus_imu_adc;
     memset(&bus_imu_adc, 0, sizeof(bus_imu_adc));
-    bus_imu_adc.miso_io_num = GPIO_NUM_2;
-    bus_imu_adc.mosi_io_num = GPIO_NUM_3;
-    bus_imu_adc.sclk_io_num = GPIO_NUM_4;
+    bus_imu_adc.miso_io_num = GPIO_NUM_4;
+    bus_imu_adc.mosi_io_num = GPIO_NUM_2;
+    bus_imu_adc.sclk_io_num = GPIO_NUM_3;
     bus_imu_adc.quadwp_io_num = -1;
     bus_imu_adc.quadhd_io_num = -1;
 
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_imu_adc, SPI_DMA_CH_AUTO));
 
+    driver.adc = new ADS7066(SPI2_HOST, GPIO_NUM_5);
     driver.imu = new MPU6500(SPI2_HOST, GPIO_NUM_14);
 
     // Encoder SPIバスの設定
@@ -727,6 +738,7 @@ extern "C" void app_main(void)
     loadTraject(&driver.start, "/storage/start.csv", STRAIGHT);
     loadTraject(&driver.stop, "/storage/stop.csv", STRAIGHT);
     loadTraject(&driver.straight, "/storage/straight.csv", STRAIGHT);
+    gpio_set_level(GPIO_NUM_21,1);
 
     while (1)
     {
@@ -739,8 +751,20 @@ extern "C" void app_main(void)
             vTaskDelay(pdMS_TO_TICKS(100));
         }
         else
-        {
-            vTaskDelay(1);
+        {   
+            gpio_set_level(GPIO_NUM_17,0);
+            esp_rom_delay_us(800);
+            gpio_set_level(GPIO_NUM_17,1);
+
+            sprintf(buf, "%6d %6d %6d %6d %6d",
+                    driver.adc->readOnTheFly(1),
+                    driver.adc->readOnTheFly(6),
+                    driver.adc->readOnTheFly(7),
+                    driver.adc->readOnTheFly(4),
+                    driver.adc->readOnTheFly(0));
+
+            nordic_uart_sendln(buf);
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
     }
 }

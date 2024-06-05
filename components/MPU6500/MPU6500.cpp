@@ -17,12 +17,17 @@ MPU6500::MPU6500(spi_host_device_t bus, gpio_num_t cs){
     uint8_t who = whoami();
     if(who != MPU6500_WHO_AM_I){ //MPU6500 : read(0x75)  ICM20648 : read(0x00)
         ESP_LOGW("MPU6500", "WHOAMI is not match %x:%x", MPU6500_WHO_AM_I, who);
-        while (1) {} // Add a placeholder statement
+        while (1) {
+            vTaskDelay(1000);
+            ESP_LOGW("MPU6500","WHOAMI:%x", whoami());
+        } // Add a placeholder statement
         return;
     }
     
     if(changesens(2,1) == -1){
-        while (1) {} // Add a placeholder statement
+        while (1) {
+            vTaskDelay(1);
+        } // Add a placeholder statement
     }
 
     ESP_LOGI("MPU6500", "Initialized");

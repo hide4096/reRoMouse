@@ -7,6 +7,7 @@
 #include "Buzzer.hpp"
 #include "Motor.hpp"
 #include "MA730.hpp"
+#include "ADS7066.hpp"
 
 struct pid_gain_t
 {
@@ -72,6 +73,7 @@ public:
     MA730 *encR;
     MPU6500 *imu;
     PCA9632 *led;
+    ADS7066 *adc;
     BUZZER *buzzer;
     NeoPixel *np;
     Motor *motor;
