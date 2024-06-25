@@ -9,18 +9,112 @@
 #include "esp_vfs.h"
 #include "esp_vfs_fat.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"
+#include "main.hpp"
+#include "sdkconfig.h"
 extern "C"
 {
 #include "nimble-nordic-uart.h"
 }
 
-#include "main.hpp"
-#include "sdkconfig.h"
-
 QueueHandle_t notify;
 QueueHandle_t routemap;
+QueueHandle_t sensing;
 const char *base_path = "/storage";
 static wl_handle_t wl_handle = WL_INVALID_HANDLE;
+static SemaphoreHandle_t wallCharged;
+driver_t driver;
+
+static void timer_chargeCompleted(void *args)
+{
+    BaseType_t _highPriorityTask = pdFALSE;
+    xSemaphoreGiveFromISR(wallCharged, &_highPriorityTask);
+    portYIELD_FROM_ISR(_highPriorityTask);
+}
+
+void sensing_1ms(void *pvparam)
+{
+    driver_t *driver = (driver_t *)pvparam;
+    wallsensor_t wall;
+    sensing_t sense;
+    uint16_t past_encL = driver->encL->readAngle();
+    uint16_t past_encR = driver->encR->readAngle();
+
+    const uint16_t RESOLUTION = 0x4000;
+    const uint16_t HALF_RES = RESOLUTION / 2;
+    const float TIRE_DIAM = 0.01368;
+    const float PULSE2RAD = TIRE_DIAM * M_PI / RESOLUTION;
+
+    for (int i = 0; i < 4; i++)
+    {
+        gpio_set_level(wall.LED[i], 1);
+    }
+    driver->adc->readOnTheFly(4);
+
+    esp_timer_create_args_t chargeTimerSetting = {
+        .callback = &timer_chargeCompleted,
+        .name = "wallCharge"};
+    esp_timer_handle_t chargeTimer;
+    ESP_ERROR_CHECK(esp_timer_create(&chargeTimerSetting, &chargeTimer));
+
+    wallCharged = xSemaphoreCreateBinary();
+
+    while (1)
+    {
+        //! ADC
+        uint16_t _on, _off;
+        sense.lipo_V = driver->adc->readOnTheFly(wall.SENS[0]) / 65535.0 * 3.3 * 5.0;
+        for (int i = 0; i < 4; i++)
+        {
+            if (i > 0)
+                _on = driver->adc->readOnTheFly(wall.SENS[i]);
+            gpio_set_level(wall.LED[i], 0);
+            esp_timer_start_once(chargeTimer, wall.charge_us);
+            xSemaphoreTake(wallCharged, portMAX_DELAY);
+            gpio_set_level(wall.LED[i], 1);
+            esp_rom_delay_us(wall.rise_us);
+            if (i > 0)
+                wall.value[i - 1] = _on - _off;
+            _off = driver->adc->readOnTheFly(wall.SENS[i]);
+        }
+        _on = driver->adc->readOnTheFly(4);
+        wall.value[3] = _on - _off;
+
+        sense.wall[0] = wall.value[0];
+        sense.wall[1] = wall.value[2];
+        sense.wall[2] = wall.value[1];
+        sense.wall[3] = wall.value[3];
+
+        //! ジャイロセンサ
+        sense.gyroZ_rad = driver->imu->gyroZ() * (M_PI / 180.0);
+
+        //! エンコーダ
+        uint16_t encL = driver->encL->readAngle();
+        uint16_t encR = driver->encR->readAngle();
+
+        int16_t diff_encL = encL - past_encL;
+        int16_t diff_encR = encR - past_encR;
+
+        past_encL = encL;
+        past_encR = encR;
+
+        // 速度計算
+        if (diff_encL > HALF_RES)
+            diff_encL -= RESOLUTION;
+        if (diff_encR > HALF_RES)
+            diff_encR -= RESOLUTION;
+        if (diff_encL < -HALF_RES)
+            diff_encL += RESOLUTION;
+        if (diff_encR < -HALF_RES)
+            diff_encR += RESOLUTION;
+
+        sense.velL = diff_encL * PULSE2RAD / 1000.0;
+        sense.velR = diff_encR * PULSE2RAD / 1000.0;
+
+        xQueueSend(sensing, &sense, 0);
+        vTaskDelay(1);
+    }
+}
 
 void control_1ms_task(void *pvparam)
 {
@@ -29,24 +123,16 @@ void control_1ms_task(void *pvparam)
     odometry_t odom = {0, 0, 0};
     float vel = 0;
     float angvel = 0;
-    uint16_t past_encL = driver->encL->readAngle();
-    uint16_t past_encR = driver->encR->readAngle();
 
     float integral_velError = 0;
     float integral_angvelError = 0;
     float past_vel = 0;
     float past_angvel = 0;
 
-    const uint16_t RESOLUTION = 0x4000;
-    const uint16_t HALF_RES = RESOLUTION / 2;
-    const float TIRE_DIAM = 0.01368;
-    const float PULSE2RAD = TIRE_DIAM * M_PI / RESOLUTION;
-
-    float voltage = 4.0;
     voltage_t volt = {0, 0};
     voltage_t ff_volt = {0, 0};
 
-    wallsensor_t wall;
+    sensing_t sense;
 
     notify_t notifyMsg;
 
@@ -65,27 +151,180 @@ void control_1ms_task(void *pvparam)
     routemap_t nextRoute;
     nextRoute.path = NULL;
 
-    for (int i = 0; i < 4; i++)
-    {
-        gpio_set_level(wall.LED[i], 1);
-    }
-
     while (1)
     {
-        // 壁センサ読む
-        driver->adc->readOnTheFly(wall.SENS[0]);
-        for (int i = 0; i < 4; i++)
-        {
-            uint16_t _off = driver->adc->readOnTheFly(wall.SENS[i]);
-            gpio_set_level(wall.LED[i], 0);
-            esp_rom_delay_us(wall.charge_us);
-            gpio_set_level(wall.LED[i], 1);
-            esp_rom_delay_us(wall.rise_us);
-            uint16_t _on = driver->adc->readOnTheFly(wall.SENS[(i + 1) % 4]);
-            wall.value[i] = _on;
-        }
+        xQueueReceive(sensing, &sense, portMAX_DELAY);
 
-        if (driver->enable == false)
+        if (driver->enable)
+        {
+            //! 速度計算
+            vel = (sense.velL + sense.velR) / 2;
+            //! オドメトリ計算
+            odom.yaw += sense.gyroZ_rad * 0.001;
+            odom.x += vel * cos(odom.yaw) * 0.001;
+            odom.y += vel * sin(odom.yaw) * 0.001;
+
+            //! 軌道追従する
+            switch (driver->mode)
+            {
+            case GENERAL:
+                break;
+            case TRAJECT:
+                if (nextRoute.path == NULL)
+                {
+                    if (xQueueReceive(routemap, &nextRoute, 0) != pdTRUE)
+                    {
+                        driver->enable = false;
+                        break;
+                    }
+                }
+
+                orbit_t _ob = nextRoute.path->orbit[tickTraject * nextRoute.divide];
+                int _obFutureIndex = (tickTraject + 1) * nextRoute.divide;
+                if (_obFutureIndex >= nextRoute.path->size)
+                    _obFutureIndex = nextRoute.path->size - 1;
+                orbit_t _obFuture = nextRoute.path->orbit[_obFutureIndex];
+
+                float ob_x = _origin_x;
+                float ob_y = _origin_y;
+                float obFuture_x = _origin_x;
+                float obFuture_y = _origin_y;
+
+                float reverse = 1;
+                if (nextRoute.isReverse)
+                    reverse = -1;
+
+                switch (direction)
+                {
+                default:
+                case NORTH:
+                    ob_x += _ob.x;
+                    ob_y += _ob.y * reverse;
+                    obFuture_x += _obFuture.x;
+                    obFuture_y += _obFuture.y * reverse;
+                    break;
+                case EAST:
+                    ob_x += _ob.y * reverse;
+                    ob_y -= _ob.x;
+                    obFuture_x += _obFuture.y * reverse;
+                    obFuture_y -= _obFuture.x;
+                    break;
+                case SOUTH:
+                    ob_x -= _ob.x;
+                    ob_y -= _ob.y * reverse;
+                    obFuture_x -= _obFuture.x;
+                    obFuture_y -= _obFuture.y * reverse;
+                    break;
+                case WEST:
+                    ob_x -= _ob.y * reverse;
+                    ob_y += _ob.x;
+                    obFuture_x -= _obFuture.y * reverse;
+                    obFuture_y += _obFuture.x;
+                    break;
+                }
+
+                float _dxTgt = (obFuture_x - ob_x) / 0.001;
+                float _dyTgt = (obFuture_y - ob_y) / 0.001;
+                float _ddxTgt = (_dxTgt - dxPast) / 0.001;
+                float _ddyTgt = (_dyTgt - dyPast) / 0.001;
+
+                float _dx = vel * cos(odom.yaw);
+                float _dy = vel * sin(odom.yaw);
+
+                float ux = _ddxTgt + driver->trace_gain.kx1 * (_dxTgt - _dx) + driver->trace_gain.kx2 * (ob_x - odom.x);
+                float uy = _ddyTgt + driver->trace_gain.ky1 * (_dyTgt - _dy) + driver->trace_gain.ky2 * (ob_y - odom.y);
+                float dxi = ux * cos(odom.yaw) + uy * sin(odom.yaw);
+
+                dxPast = _dxTgt;
+                dyPast = _dyTgt;
+
+                xi += dxi * 0.001;
+
+                driver->tgt_vel = xi;
+                if (xi > 0.05)
+                    driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / xi;
+                else
+                    driver->tgt_angvel = 0;
+
+                tickTraject++;
+
+                if (tickTraject * nextRoute.divide >= nextRoute.path->size - 1)
+                {
+                    tickTraject = 0;
+                    _origin_x = obFuture_x;
+                    _origin_y = obFuture_y;
+                    if (nextRoute.isReverse)
+                    {
+                        direction = (direction - nextRoute.path->turn + 4) % 4;
+                    }
+                    else
+                    {
+                        direction = (direction + nextRoute.path->turn + 4) % 4;
+                    }
+                    nextRoute.path = NULL;
+                }
+                break;
+            }
+
+            //! モーター制御
+            //! ステップで渡されるターゲット速度と角度をランプ入力にする
+            float _angaccel = 0;
+            float _accel = 0;
+
+            float _demand_accel = (driver->tgt_vel - ramp_tgt_vel) / 0.001;
+            float _demand_angaccel = (driver->tgt_angvel - ramp_tgt_angvel) / 0.001;
+
+            if (_demand_accel > driver->accelMax)
+                _accel = driver->accelMax * 0.001;
+            else if (_demand_accel < -driver->accelMax)
+                _accel = -driver->accelMax * 0.001;
+            else
+                ramp_tgt_vel = driver->tgt_vel;
+
+            if (_demand_angaccel > driver->angaccelMax)
+                _angaccel = driver->angaccelMax * 0.001;
+            else if (_demand_angaccel < -driver->angaccelMax)
+                _angaccel = -driver->angaccelMax * 0.001;
+            else
+                ramp_tgt_angvel = driver->tgt_angvel;
+
+            if (_accel != 0)
+                ramp_tgt_vel += _accel;
+            if (_angaccel != 0)
+                ramp_tgt_angvel += _angaccel;
+
+            //! FF制御
+            ff_volt.voltageL = (_accel - _angaccel * 0.0105) * driver->ff_gain;
+            ff_volt.voltageR = (_accel + _angaccel * 0.0105) * driver->ff_gain;
+
+            //! PI-D制御
+            float velError = ramp_tgt_vel - vel;
+            float diff_vel = (past_vel - vel) / 0.001;
+            integral_velError += velError * 0.001;
+
+            float angvelError = angvel - ramp_tgt_angvel;
+            float diff_angvel = (past_angvel - angvel) / 0.001;
+            integral_angvelError += angvelError * 0.001;
+
+            pid_gain_t vel_gain = driver->vel_gain;
+            pid_gain_t angvel_gain = driver->angvel_gain;
+
+            volt.voltageL = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
+            volt.voltageR = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
+
+            volt.voltageL -= angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
+            volt.voltageR += angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
+
+            past_vel = vel;
+            past_angvel = angvel;
+
+            notifyMsg.odom = odom;
+
+            driver->motor->setMotorSpeed((volt.voltageL + ff_volt.voltageL) / sense.lipo_V, (volt.voltageR + ff_volt.voltageR) / sense.lipo_V);
+
+            driver->tick++;
+        }
+        else if (driver->tick > 0)
         {
             driver->motor->setMotorSpeed(0, 0);
             integral_angvelError = 0;
@@ -111,226 +350,15 @@ void control_1ms_task(void *pvparam)
             xQueueReset(notify);
 
             memset(&odom, 0, sizeof(odometry_t));
-            while (driver->enable == false)
-            {
-                vTaskDelay(1);
-            }
         }
 
-        /*
-        if(fabs(vel) >= 2.0 || fabs(angvel) >= 30.0)
-        {
-            driver->enable = false;
-        }
-        */
-
-        switch (driver->mode)
-        {
-        case GENERAL:
-            break;
-        case TRAJECT:
-            if (nextRoute.path == NULL)
-            {
-                if (xQueueReceive(routemap, &nextRoute, 0) != pdTRUE)
-                {
-                    driver->enable = false;
-                    break;
-                }
-            }
-
-            orbit_t _ob = nextRoute.path->orbit[tickTraject * nextRoute.divide];
-            int _obFutureIndex = (tickTraject + 1) * nextRoute.divide;
-            if (_obFutureIndex >= nextRoute.path->size)
-                _obFutureIndex = nextRoute.path->size - 1;
-            orbit_t _obFuture = nextRoute.path->orbit[_obFutureIndex];
-
-            float ob_x = _origin_x;
-            float ob_y = _origin_y;
-            float obFuture_x = _origin_x;
-            float obFuture_y = _origin_y;
-
-            float reverse = 1;
-            if (nextRoute.isReverse)
-                reverse = -1;
-
-            switch (direction)
-            {
-            default:
-            case NORTH:
-                ob_x += _ob.x;
-                ob_y += _ob.y * reverse;
-                obFuture_x += _obFuture.x;
-                obFuture_y += _obFuture.y * reverse;
-                break;
-            case EAST:
-                ob_x += _ob.y * reverse;
-                ob_y -= _ob.x;
-                obFuture_x += _obFuture.y * reverse;
-                obFuture_y -= _obFuture.x;
-                break;
-            case SOUTH:
-                ob_x -= _ob.x;
-                ob_y -= _ob.y * reverse;
-                obFuture_x -= _obFuture.x;
-                obFuture_y -= _obFuture.y * reverse;
-                break;
-            case WEST:
-                ob_x -= _ob.y * reverse;
-                ob_y += _ob.x;
-                obFuture_x -= _obFuture.y * reverse;
-                obFuture_y += _obFuture.x;
-                break;
-            }
-
-            float _dxTgt = (obFuture_x - ob_x) / 0.001;
-            float _dyTgt = (obFuture_y - ob_y) / 0.001;
-            float _ddxTgt = (_dxTgt - dxPast) / 0.001;
-            float _ddyTgt = (_dyTgt - dyPast) / 0.001;
-
-            float _dx = vel * cos(odom.yaw);
-            float _dy = vel * sin(odom.yaw);
-
-            float ux = _ddxTgt + driver->trace_gain.kx1 * (_dxTgt - _dx) + driver->trace_gain.kx2 * (ob_x - odom.x);
-            float uy = _ddyTgt + driver->trace_gain.ky1 * (_dyTgt - _dy) + driver->trace_gain.ky2 * (ob_y - odom.y);
-            float dxi = ux * cos(odom.yaw) + uy * sin(odom.yaw);
-
-            dxPast = _dxTgt;
-            dyPast = _dyTgt;
-
-            xi += dxi * 0.001;
-
-            driver->tgt_vel = xi;
-            if (xi > 0.05)
-                driver->tgt_angvel = (uy * cos(odom.yaw) - ux * sin(odom.yaw)) / xi;
-            else
-                driver->tgt_angvel = 0;
-
-            // ESP_LOGI("traject", "%.3f %.3f %.3f %.3f %.3f", ux, uy, sin(odom.yaw), cos(odom.yaw), tracking.xi);
-            notifyMsg.direction = direction;
-            tickTraject++;
-
-            if (tickTraject * nextRoute.divide >= nextRoute.path->size - 1)
-            {
-                tickTraject = 0;
-                _origin_x = obFuture_x;
-                _origin_y = obFuture_y;
-                if (nextRoute.isReverse)
-                {
-                    direction = (direction - nextRoute.path->turn + 4) % 4;
-                }
-                else
-                {
-                    direction = (direction + nextRoute.path->turn + 4) % 4;
-                }
-                nextRoute.path = NULL;
-            }
-            break;
-        }
-
-        // エンコーダーの値を取得
-        uint16_t encL = driver->encL->readAngle();
-        uint16_t encR = driver->encR->readAngle();
-
-        int16_t diff_encL = encL - past_encL;
-        int16_t diff_encR = encR - past_encR;
-
-        past_encL = encL;
-        past_encR = encR;
-
-        // 速度計算
-        if (diff_encL > HALF_RES)
-            diff_encL -= RESOLUTION;
-        if (diff_encR > HALF_RES)
-            diff_encR -= RESOLUTION;
-        if (diff_encL < -HALF_RES)
-            diff_encL += RESOLUTION;
-        if (diff_encR < -HALF_RES)
-            diff_encR += RESOLUTION;
-
-        float lenL = diff_encL * PULSE2RAD;
-        float lenR = diff_encR * PULSE2RAD;
-
-        float velL = lenL / 0.001;
-        float velR = lenR / 0.001;
-
-        vel = (velL + velR) / 2;
-
-        // 角度計算
-        angvel = (driver->imu->gyroZ() * (M_PI / 180.));
-        odom.yaw += angvel * 0.001;
-
-        odom.x += vel * cos(odom.yaw) * 0.001;
-        odom.y += vel * sin(odom.yaw) * 0.001;
-
-        // モーター制御
-        // ステップで渡されるターゲット速度と角度をランプ入力にする
-        float _angaccel = 0;
-        float _accel = 0;
-
-        float _demand_accel = (driver->tgt_vel - ramp_tgt_vel) / 0.001;
-        float _demand_angaccel = (driver->tgt_angvel - ramp_tgt_angvel) / 0.001;
-
-        if (_demand_accel > driver->accelMax)
-            _accel = driver->accelMax * 0.001;
-        else if (_demand_accel < -driver->accelMax)
-            _accel = -driver->accelMax * 0.001;
-        else
-            ramp_tgt_vel = driver->tgt_vel;
-
-        if (_demand_angaccel > driver->angaccelMax)
-            _angaccel = driver->angaccelMax * 0.001;
-        else if (_demand_angaccel < -driver->angaccelMax)
-            _angaccel = -driver->angaccelMax * 0.001;
-        else
-            ramp_tgt_angvel = driver->tgt_angvel;
-
-        if (_accel != 0)
-            ramp_tgt_vel += _accel;
-        if (_angaccel != 0)
-            ramp_tgt_angvel += _angaccel;
-
-        // FF制御
-        ff_volt.voltageL = (_accel - _angaccel * 0.0105) * driver->ff_gain;
-        ff_volt.voltageR = (_accel + _angaccel * 0.0105) * driver->ff_gain;
-
-        // PI-D制御
-        float velError = ramp_tgt_vel - vel;
-        float diff_vel = (past_vel - vel) / 0.001;
-        integral_velError += velError * 0.001;
-
-        float angvelError = angvel - ramp_tgt_angvel;
-        float diff_angvel = (past_angvel - angvel) / 0.001;
-        integral_angvelError += angvelError * 0.001;
-
-        pid_gain_t vel_gain = driver->vel_gain;
-        pid_gain_t angvel_gain = driver->angvel_gain;
-
-        volt.voltageL = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
-        volt.voltageR = vel_gain.kp * velError + vel_gain.ki * integral_velError + vel_gain.kd * diff_vel;
-
-        volt.voltageL -= angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
-        volt.voltageR += angvel_gain.kp * angvelError + angvel_gain.ki * integral_angvelError + angvel_gain.kd * diff_angvel;
-
-        past_vel = vel;
-        past_angvel = angvel;
-
-        // データをキューに送信
-        notifyMsg.output_voltage = volt;
-        notifyMsg.ff_voltage = ff_volt;
-        notifyMsg.odom = odom;
-        notifyMsg.tgt_vel = driver->tgt_vel;
-        notifyMsg.tgt_angvel = driver->tgt_angvel;
-        memcpy(notifyMsg.wallsens, wall.value, sizeof(uint16_t) * 4);
+        notifyMsg.lipovoltage = sense.lipo_V;
+        memcpy(notifyMsg.wallsens, sense.wall, sizeof(uint16_t) * 4);
         xQueueSend(notify, &notifyMsg, 0);
 
-        driver->motor->setMotorSpeed((volt.voltageL + ff_volt.voltageL) / voltage, (volt.voltageR + ff_volt.voltageR) / voltage);
-
-        driver->tick++;
         vTaskDelay(1);
     }
 }
-
-driver_t driver;
 
 inline void parse_command(char *input, char *output, int size)
 {
@@ -747,11 +775,11 @@ extern "C" void app_main(void)
     driver.np->show();
 
     driver.enable = false;
-    xTaskCreatePinnedToCore(control_1ms_task, "control_1ms_task", 8192, &driver, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);
+    sensing = xQueueCreate(1, sizeof(sensing_t));
+    xTaskCreatePinnedToCore(sensing_1ms, "sensing_1ms", 8192, &driver, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);
+    xTaskCreatePinnedToCore(control_1ms_task, "control_1ms_task", 8192, &driver, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
     driver.tgt_vel = 0;
     driver.tgt_angvel = 0;
-
-    char buf[64];
 
     // 軌道データの読み込み
     routemap = xQueueCreate(20, sizeof(routemap_t));
@@ -759,45 +787,15 @@ extern "C" void app_main(void)
     loadTraject(&driver.start, "/storage/start.csv", STRAIGHT);
     loadTraject(&driver.stop, "/storage/stop.csv", STRAIGHT);
     loadTraject(&driver.straight, "/storage/straight.csv", STRAIGHT);
-    gpio_set_level(GPIO_NUM_21, 1);
+
+    char buf[64];
     notify_t notifyMsg;
-    wallsensor_t wall;
-    wall.charge_us = 100;
-    for (int i = 0; i < 4; i++)
-    {
-        gpio_set_level(wall.LED[i], 1);
-    }
+
     while (1)
     {
-        if (driver.enable)
-        {
-            xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
-            // sprintf(buf, "%3.3f %3.3f %d", notifyMsg.odom.x, notifyMsg.odom.y, notifyMsg.direction);
-            sprintf(buf, "%05d %05d %05d %05d", notifyMsg.wallsens[0], notifyMsg.wallsens[1], notifyMsg.wallsens[2], notifyMsg.wallsens[3]);
-            nordic_uart_sendln(buf);
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-        else
-        {
-            uint16_t _on, _off;
-            driver.adc->readOnTheFly(wall.SENS[0]);
-            for (int i = 0; i < 4; i++)
-            {
-                if (i > 0)
-                    _on = driver.adc->readOnTheFly(wall.SENS[i]);
-                gpio_set_level(wall.LED[i], 0);
-                esp_rom_delay_us(wall.charge_us);
-                gpio_set_level(wall.LED[i], 1);
-                esp_rom_delay_us(wall.rise_us);
-                if (i > 0)
-                    wall.value[i - 1] = _on - _off;
-                _off = driver.adc->readOnTheFly(wall.SENS[i]);
-            }
-            _on = driver.adc->readOnTheFly(-1);
-            wall.value[3] = _on - _off;
-            sprintf(buf, "%05d %05d %05d %05d", wall.value[0], wall.value[2], wall.value[1], wall.value[3]);
-            nordic_uart_sendln(buf);
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
+        xQueueReceive(notify, &notifyMsg, portMAX_DELAY);
+        sprintf(buf, "%1.3f %05d %05d %05d %05d",notifyMsg.lipovoltage, notifyMsg.wallsens[0], notifyMsg.wallsens[1], notifyMsg.wallsens[2], notifyMsg.wallsens[3]);
+        nordic_uart_sendln(buf);
+        vTaskDelay(100);
     }
 }
