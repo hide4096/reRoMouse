@@ -22,7 +22,7 @@ void Motion::ptr_by_control(t_control *_control) { control = _control; }
 
 void Motion::ptr_by_map(t_map *_map) { map = _map; }
 
-void Motion::set_device(MCP3464 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot)
+void Motion::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot)
 {
     adc = &_adc;
     encR = &_encR;

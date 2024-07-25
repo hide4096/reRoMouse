@@ -8,7 +8,7 @@
 #include "PCA9632.hpp"
 #include "Buzzer.hpp"
 #include "Motor.hpp"
-#include "MCP3464.hpp"
+#include "ADS7066.hpp"
 #include "MA730.hpp"
 #include "structs.hpp"
 #include "micromouse.hpp"
@@ -26,7 +26,7 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_imu_adc, SPI_DMA_CH_AUTO));
 
-    MCP3464 adc(SPI2_HOST, GPIO_NUM_5);
+    ADS7066 adc(SPI2_HOST, GPIO_NUM_5);
     MPU6500 imu(SPI2_HOST, GPIO_NUM_14);
 
     // Encoder SPIバスの設定

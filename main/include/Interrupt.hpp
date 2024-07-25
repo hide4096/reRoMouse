@@ -25,7 +25,7 @@ class Interrupt : public Micromouse{
         void ptr_by_motion(t_mouse_motion_val *val) override;
         void ptr_by_control(t_control *control) override;
         void ptr_by_map(t_map *map) override;
-        void set_device(MCP3464 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) override;
+        void set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) override;
         void GetSemphrHandle(SemaphoreHandle_t *_on_logging);
         void reset_I_gain();
         void logging();
@@ -47,7 +47,7 @@ class Interrupt : public Micromouse{
         float target_acc = 0.0;
         float sum_len = 0.0;
 
-        MCP3464 *adc;
+        ADS7066 *adc;
         MA730 *encR;
         MA730 *encL;
         BUZZER *buz;

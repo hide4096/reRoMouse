@@ -10,7 +10,7 @@
 
 std::vector<std::shared_ptr<UI>> ui;
 
-void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU6500 &imu, PCA9632 &led, Motor &motor);
+void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU6500 &imu, PCA9632 &led, Motor &motor);
 void set_interface();
 void call_task(UI *task, Adachi &motion);
 void set_param(Micromouse *task, t_sens_data *_sen, t_mouse_motion_val *_val, t_control *_control, t_map *_map);
@@ -24,7 +24,7 @@ void myTaskInterrupt(void *pvpram)
 
 /*void myTaskAdc(void *pvpram)
 {
-    MCP3464 *adc = static_cast<MCP3464 *>(pvpram);
+    ADS7066 *adc = static_cast<ADS7066 *>(pvpram);
     adc->adc_loop();
 }*/
 
@@ -36,7 +36,7 @@ void myTaskLog(void *pvpram)
 
 /* 基本的に全ての処理のをここにまとめ、mainで呼び出す。 */
 
-void MICROMOUSE(MCP3464 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU6500 &imu, PCA9632 &led, Motor &motor)
+void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU6500 &imu, PCA9632 &led, Motor &motor)
 {
     // printf("start MICROMOUSE\n");
 
