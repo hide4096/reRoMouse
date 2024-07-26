@@ -26,7 +26,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_imu_adc, SPI_DMA_CH_AUTO));
 
     driver->adc = std::make_shared<ADS7066>(SPI2_HOST, GPIO_NUM_5);
-    driver->imu = std::make_shared<MPU6500>(SPI2_HOST, GPIO_NUM_10);
+    driver->imu = std::make_shared<MPU6500>(SPI2_HOST, GPIO_NUM_14);
 
     // Encoder SPIバスの設定
     spi_bus_config_t bus_enc;
@@ -42,8 +42,8 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &bus_enc, SPI_DMA_DISABLED));
 
-    driver->encL = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_6);
-    driver->encR = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_1);
+    driver->encL = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_6, 1);
+    driver->encR = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_1, 0);
 
     // LED driver I2Cバスの設定
     i2c_config_t led_conf;
@@ -61,7 +61,7 @@ extern "C" void app_main(void)
 
     driver->led = std::make_shared<PCA9632>(I2C_NUM_0, 0x62);
 
-    driver->led->set(0b1001);
+    driver->led->set(0b1111);
 
     // Buzzer GPIOの設定
     driver->bz = std::make_shared<BUZZER>(GPIO_NUM_13);

@@ -1,6 +1,6 @@
 #include "MA730.hpp"
 
-MA730::MA730(spi_host_device_t bus, gpio_num_t cs)
+MA730::MA730(spi_host_device_t bus, gpio_num_t cs, uint8_t ccw)
 {
     // SPIデバイスの設定
     memset(&dev_enc, 0, sizeof(dev_enc));
@@ -10,8 +10,12 @@ MA730::MA730(spi_host_device_t bus, gpio_num_t cs)
     dev_enc.queue_size = 1;
 
     err = spi_bus_add_device(bus, &dev_enc, &_spi);
-    ESP_ERROR_CHECK(err);
+    ESP_ERROR_CHECK(err); 
 
+    if((ReadRegister(ADRS_Rotation_direction, 0x00) & 0x80) >> 7 != ccw)
+    {
+        WriteRegister(ADRS_Rotation_direction, ccw << 7);
+    }
     ESP_LOGI("MA730", "CS:%d Initialized", cs);
 }
 
@@ -57,6 +61,7 @@ uint8_t MA730::ReadRegister(uint8_t address, uint8_t data)
 uint8_t MA730::WriteRegister(uint8_t address, uint8_t data)
 {
     OperateRegisters(WRITE_COMMAND, address, data);
+    vTaskDelay(pdMS_TO_TICKS(20));
     return read() >> 8;
 }
 
