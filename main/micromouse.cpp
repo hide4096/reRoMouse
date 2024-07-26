@@ -10,7 +10,7 @@
 
 std::vector<std::shared_ptr<UI>> ui;
 
-void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU6500 &imu, PCA9632 &led, Motor &motor);
+void MICROMOUSE(std::shared_ptr<t_drivers> driver);
 void set_interface();
 void call_task(UI *task, Adachi &motion);
 void set_param(Micromouse *task, t_sens_data *_sen, t_mouse_motion_val *_val, t_control *_control, t_map *_map);
@@ -36,7 +36,7 @@ void myTaskLog(void *pvpram)
 
 /* 基本的に全ての処理のをここにまとめ、mainで呼び出す。 */
 
-void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU6500 &imu, PCA9632 &led, Motor &motor)
+void MICROMOUSE(std::shared_ptr<t_drivers> driver)
 {
     // printf("start MICROMOUSE\n");
 
@@ -58,7 +58,7 @@ void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
 
     // 制御系
     Interrupt interrupt;
-    interrupt.set_device(adc, enc_R, enc_L, buzzer, imu, led, motor);
+    interrupt.set_device_driver(driver);
     printf("finish set device\n");
     interrupt.ptr_by_sensor(&sens);
     interrupt.ptr_by_motion(&val);
@@ -71,7 +71,7 @@ void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
 
     // モーション系
     Adachi motion;
-    motion.set_device(adc, enc_R, enc_L, buzzer, imu, led, motor);
+    motion.set_device_driver(driver);
     motion.ptr_by_sensor(&sens);
     motion.ptr_by_motion(&val);
     motion.ptr_by_control(&control);
@@ -82,9 +82,9 @@ void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
 
     // センサ系
     //adc.GetData(&sens);
-    imu.GetData(&sens);
-    enc_R.GetData(&sens);
-    enc_L.GetData(&sens);
+    driver->imu->GetData(&sens);
+    driver->encR->GetData(&sens);
+    driver->encL->GetData(&sens);
 
     printf("finish sensor struct\n");
 
@@ -187,7 +187,7 @@ void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
     while (1)
     {
         
-        led.set(mode + 1);
+        driver->led->set(mode + 1);
 
         /*vTaskList(buffer);
         printf("Task execution statistics:\n%s", buffer);*/
@@ -202,8 +202,8 @@ void MICROMOUSE(ADS7066 &adc, MA730 &enc_R, MA730 &enc_L, BUZZER &buzzer, MPU650
         }*/
         if (time_count > 500)
         {
-            led.set(0b1111);
-            sens.gyro.ref = imu.surveybias(2000);
+            driver->led->set(0b1111);
+            sens.gyro.ref = driver->imu->surveybias(2000);
             mode_select(&mode, motion, &sens, &val, &control, &map);
             control.flag = FALSE;
             time_count = 0;

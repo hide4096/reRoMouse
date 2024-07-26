@@ -1,17 +1,16 @@
+#include <iostream>
+#include <memory>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/spi_master.h"
 #include "driver/i2c.h"
 #include "esp_log.h"
 #include "NeoPixel.hpp"
-#include "MPU6500.hpp"
-#include "PCA9632.hpp"
-#include "Buzzer.hpp"
-#include "Motor.hpp"
-#include "ADS7066.hpp"
-#include "MA730.hpp"
 #include "structs.hpp"
+#include "drivers.hpp"
 #include "micromouse.hpp"
+
+std::shared_ptr<t_drivers> driver = std::make_shared<t_drivers>();
 
 extern "C" void app_main(void)
 {
@@ -26,8 +25,8 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_imu_adc, SPI_DMA_CH_AUTO));
 
-    ADS7066 adc(SPI2_HOST, GPIO_NUM_5);
-    MPU6500 imu(SPI2_HOST, GPIO_NUM_14);
+    driver->adc = std::make_shared<ADS7066>(SPI2_HOST, GPIO_NUM_5);
+    driver->imu = std::make_shared<MPU6500>(SPI2_HOST, GPIO_NUM_10);
 
     // Encoder SPIバスの設定
     spi_bus_config_t bus_enc;
@@ -43,8 +42,8 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &bus_enc, SPI_DMA_DISABLED));
 
-    MA730 EncL(SPI3_HOST,GPIO_NUM_6);
-    MA730 EncR(SPI3_HOST,GPIO_NUM_1);
+    driver->encL = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_6);
+    driver->encR = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_1);
 
     // LED driver I2Cバスの設定
     i2c_config_t led_conf;
@@ -60,30 +59,30 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &led_conf));
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
 
-    PCA9632 led(I2C_NUM_0, 0x62);
+    driver->led = std::make_shared<PCA9632>(I2C_NUM_0, 0x62);
 
-    led.set(0b1001);
+    driver->led->set(0b1001);
 
     // Buzzer GPIOの設定
-    BUZZER buzzer(GPIO_NUM_13);
+    driver->bz = std::make_shared<BUZZER>(GPIO_NUM_13);
     static BUZZER::buzzer_score_t pc98[] = {
         {2000,100},{1000,100}
     };
-    buzzer.play_melody(pc98, 2);
+    driver->bz->play_melody(pc98, 2);
 
     // NeoPixel GPIOの設定
-    NeoPixel np(GPIO_NUM_15, 1);
-    np.set_hsv({0, 0, 0}, 0, 1);
-    np.show();
+    driver->np = std::make_shared<NeoPixel>(GPIO_NUM_15, 1);
+    driver->np->set_hsv({0, 0, 0}, 0, 1);
+    driver->np->show();
 
     // Motor driver Fan Moter GPIOの設定
-    Motor motor(GPIO_NUM_41, GPIO_NUM_42, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_11, GPIO_NUM_40);
+    driver->mot = std::make_shared<Motor>(GPIO_NUM_41, GPIO_NUM_42, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_11, GPIO_NUM_40);
 
     uint32_t h = 0, h1 = 0;
     float t = 0.0;
     while (1)
     {
-        MICROMOUSE(adc, EncR, EncL, buzzer, imu, led, motor);
+        MICROMOUSE(driver);
 
         //motor.setMotorSpeed((-0.3), -(0.3));
         /*h = imu.accelZ() * 360;

@@ -9,7 +9,7 @@ void Fast::ptr_by_control(t_control *_control) { control = _control; }
 
 void Fast::ptr_by_map(t_map *_map) { map = _map; }
 
-void Fast::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) {}
+void Fast::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast::ref_by_motion(Adachi &_adachi) { motion = _adachi; } // ここでのポインタ渡しを忘れていて、InitMazeが正しく行えず、map_readがオーバーフローした
 
@@ -39,7 +39,7 @@ void Fast2::ptr_by_control(t_control *_control) { control = _control; }
 
 void Fast2::ptr_by_map(t_map *_map) { map = _map; }
 
-void Fast2::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) {}
+void Fast2::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast2::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
@@ -56,7 +56,7 @@ void Fast3::ptr_by_control(t_control *_control) { control = _control; }
 
 void Fast3::ptr_by_map(t_map *_map) { map = _map; }
 
-void Fast3::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) {}
+void Fast3::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast3::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
@@ -73,7 +73,7 @@ void Fast4::ptr_by_control(t_control *_control) { control = _control; }
 
 void Fast4::ptr_by_map(t_map *_map) { map = _map; }
 
-void Fast4::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) {}
+void Fast4::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast4::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 

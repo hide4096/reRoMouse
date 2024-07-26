@@ -22,15 +22,17 @@ void Motion::ptr_by_control(t_control *_control) { control = _control; }
 
 void Motion::ptr_by_map(t_map *_map) { map = _map; }
 
-void Motion::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot)
+void Motion::set_device_driver(std::shared_ptr<t_drivers> driver)
 {
-    adc = &_adc;
-    encR = &_encR;
-    encL = &_encL;
-    buz = &_buz;
-    imu = &_imu;
-    led = &_led;
-    mot = &_mot;
+    np = driver->np;
+    imu = driver->imu;
+    led = driver->led;
+    bz = driver->bz;
+    mot = driver->mot;
+    encL = driver->encL;
+    encR = driver->encR;
+    adc = driver->adc;
+    // std::cout << "set_device_driver" << std::endl;
 }
 
 void Motion::GetSemphrHandle(SemaphoreHandle_t *_on_logging) { on_logging = _on_logging; }

@@ -16,7 +16,7 @@ class Motion : public Micromouse
         void ptr_by_motion(t_mouse_motion_val *val) override;
         void ptr_by_control(t_control *control) override;
         void ptr_by_map(t_map *map) override;
-        void set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) override;
+        void set_device_driver(std::shared_ptr<t_drivers> driver) override;
         void GetSemphrHandle(SemaphoreHandle_t *_on_logging);
         void run();
         void run_half();
@@ -47,13 +47,14 @@ class Motion : public Micromouse
         t_map *map;
         SemaphoreHandle_t *on_logging;
 
-        ADS7066 *adc;
-        MA730 *encR;
-        MA730 *encL;
-        BUZZER *buz;
-        MPU6500 *imu;
-        PCA9632 *led;
-        Motor *mot;
+        std::shared_ptr<NeoPixel> np;
+        std::shared_ptr<MPU6500> imu;
+        std::shared_ptr<PCA9632> led;
+        std::shared_ptr<BUZZER> bz;
+        std::shared_ptr<Motor> mot;
+        std::shared_ptr<MA730> encL;
+        std::shared_ptr<MA730> encR;
+        std::shared_ptr<ADS7066> adc;
 
     private:
         uint8_t len_count = 0;

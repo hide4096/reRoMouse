@@ -11,7 +11,7 @@ void Log::ptr_by_control(t_control *_control) { control = _control; }
 
 void Log::ptr_by_map(t_map *_map) { map = _map; }
 
-void Log::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) {}
+void Log::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Log::ref_by_motion(Adachi &_adachi) {}
 
@@ -60,7 +60,7 @@ void Log1::ptr_by_control(t_control *_control) { control = _control; }
 
 void Log1::ptr_by_map(t_map *_map) { map = _map; }
 
-void Log1::set_device(ADS7066 &_adc, MA730 &_encR, MA730 &_encL, BUZZER &_buz, MPU6500 &_imu, PCA9632 &_led, Motor &_mot) {}
+void Log1::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Log1::ref_by_motion(Adachi &_adachi) {}
 
