@@ -13,7 +13,7 @@
 
 _interface Sensor 
 {
-    virtual void GetData(t_sens_data *_sens) = 0;
+    virtual void Shar_SensData(t_sens_data *_sens) = 0;
 };
 
 #endif // SENSOR_HPP

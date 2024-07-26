@@ -42,7 +42,7 @@ public:
     float gyro_sensitivity = 1, accel_sensitivity = 1;
     bool in_survaeybias = false;
 
-    void GetData(t_sens_data *_sens) override;
+    void Shar_SensData(t_sens_data *_sens) override;
 
 private:
     spi_device_handle_t _spi;

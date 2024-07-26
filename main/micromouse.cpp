@@ -81,10 +81,10 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
     printf("finish motion struct\n");
 
     // センサ系
-    //adc.GetData(&sens);
-    driver->imu->GetData(&sens);
-    driver->encR->GetData(&sens);
-    driver->encL->GetData(&sens);
+    //adc.Shar_SensData(&sens);
+    driver->imu->Shar_SensData(&sens);
+    driver->encR->Shar_SensData(&sens);
+    driver->encL->Shar_SensData(&sens);
 
     printf("finish sensor struct\n");
 
