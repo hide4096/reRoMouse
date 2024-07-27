@@ -1,5 +1,5 @@
-#ifndef MICROMOUSE_HPP
-#define MICROMOUSE_HPP
+#ifndef BASE_FUNC_HPP
+#define BASE_FUNC_HPP
 
 #include <iostream>
 #include <vector>

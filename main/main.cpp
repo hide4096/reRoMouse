@@ -5,6 +5,7 @@
 #include "driver/spi_master.h"
 #include "driver/i2c.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "NeoPixel.hpp"
 #include "structs.hpp"
 #include "drivers.hpp"
@@ -17,9 +18,9 @@ extern "C" void app_main(void)
     // IMU SPIバスの設定
     spi_bus_config_t bus_imu_adc;
     memset(&bus_imu_adc, 0, sizeof(bus_imu_adc));
-    bus_imu_adc.miso_io_num = GPIO_NUM_2;
-    bus_imu_adc.mosi_io_num = GPIO_NUM_3;
-    bus_imu_adc.sclk_io_num = GPIO_NUM_4;
+    bus_imu_adc.miso_io_num = GPIO_NUM_4;
+    bus_imu_adc.mosi_io_num = GPIO_NUM_2;
+    bus_imu_adc.sclk_io_num = GPIO_NUM_3;
     bus_imu_adc.quadwp_io_num = -1;
     bus_imu_adc.quadhd_io_num = -1;
 
@@ -78,8 +79,8 @@ extern "C" void app_main(void)
     // Motor driver Fan Moter GPIOの設定
     driver->mot = std::make_shared<Motor>(GPIO_NUM_41, GPIO_NUM_42, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_11, GPIO_NUM_40);
 
-    uint32_t h = 0, h1 = 0;
-    float t = 0.0;
+    //uint32_t h = 0, h1 = 0;
+    //float t = 0.0;
     while (1)
     {
         MICROMOUSE(driver);

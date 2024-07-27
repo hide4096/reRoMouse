@@ -10,7 +10,7 @@ idf_component_register(
     "Motion.cpp"
     "search.cpp"
     "test.cpp"
-    
+    "Task.cpp"
 
     INCLUDE_DIRS
     "include"

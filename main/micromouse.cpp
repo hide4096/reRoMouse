@@ -7,6 +7,7 @@
 #include "include/micromouse.hpp"
 #include "sens_structs.hpp"
 #include <functional>
+#include "Task.hpp"
 
 std::vector<std::shared_ptr<UI>> ui;
 
@@ -16,11 +17,11 @@ void call_task(UI *task, Adachi &motion);
 void set_param(Micromouse *task, t_sens_data *_sen, t_mouse_motion_val *_val, t_control *_control, t_map *_map);
 void mode_select(uint8_t *_mode_num, Adachi &adachi, t_sens_data *sens, t_mouse_motion_val *val, t_control *control, t_map *map);
 
-void myTaskInterrupt(void *pvpram)
+/*void myTaskInterrupt(void *pvpram)
 {
     Interrupt *interrupt = static_cast<Interrupt *>(pvpram);
     interrupt->interrupt();
-}
+}*/
 
 /*void myTaskAdc(void *pvpram)
 {
@@ -28,11 +29,11 @@ void myTaskInterrupt(void *pvpram)
     adc->adc_loop();
 }*/
 
-void myTaskLog(void *pvpram)
+/*void myTaskLog(void *pvpram)
 {
     Interrupt *log = static_cast<Interrupt *>(pvpram);
     log->logging();
-}
+}*/
 
 /* 基本的に全ての処理のをここにまとめ、mainで呼び出す。 */
 
@@ -81,7 +82,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
     printf("finish motion struct\n");
 
     // センサ系
-    //adc.Shar_SensData(&sens);
+    driver->adc->Shar_SensData(&sens);
     driver->imu->Shar_SensData(&sens);
     driver->encR->Shar_SensData(&sens);
     driver->encL->Shar_SensData(&sens);
@@ -167,8 +168,8 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
     xTaskCreatePinnedToCore(myTaskInterrupt,
                             "interrupt", 8192, &interrupt, configMAX_PRIORITIES, NULL, APP_CPU_NUM);
     printf("finish interrupt task\n");
-    /*xTaskCreatePinnedToCore(myTaskAdc,
-                            "adc", 8192, &adc, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);*/
+    xTaskCreatePinnedToCore(myTaskAdc,
+                            "adc", 8192, &driver->adc, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);
     xTaskCreatePinnedToCore(myTaskLog,
                             "log", 8192, &interrupt, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
     printf("finish task\n");
@@ -192,22 +193,22 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
         /*vTaskList(buffer);
         printf("Task execution statistics:\n%s", buffer);*/
 
-        /*if (sens.wall.val.fl + sens.wall.val.l + sens.wall.val.r + sens.wall.val.fr > 3000)
+        if (sens.wall.val.fl + sens.wall.val.l + sens.wall.val.r + sens.wall.val.fr > 3000)
         {
 
-            led.set(0b1111);
-            sens.gyro.ref = imu.surveybias(2000);
+            driver->led->set(0b1111);
+            sens.gyro.ref = driver->imu->surveybias(2000);
             mode_select(&mode, motion, &sens, &val, &control, &map);
             control.flag = FALSE;
-        }*/
-        if (time_count > 500)
+        }
+        /*if (time_count > 500)
         {
             driver->led->set(0b1111);
             sens.gyro.ref = driver->imu->surveybias(2000);
             mode_select(&mode, motion, &sens, &val, &control, &map);
             control.flag = FALSE;
             time_count = 0;
-        }
+        }*/
 
         if (val.current.vel > 0.04)
         {
@@ -237,9 +238,9 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
         }
         //printf("time:%d\n", control.time_count);
         //printf("vel:%f\n", val.current.vel);
-        printf("rad:%f\n", val.current.rad);
+        //printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
-        //printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
         //printf("time:%d  mode:%d  flag:%d  Duty_L:%lf  Duty_R:%lf  Batt:%lf\n", time_count, mode, control.flag ,control.Duty_l, control.Duty_r, sens.BatteryVoltage);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);
