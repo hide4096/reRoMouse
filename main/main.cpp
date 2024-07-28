@@ -754,7 +754,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
 
     driver.led = new PCA9632(I2C_NUM_0, 0x62);
-    driver.led->set(0b0000);
+    driver.led->set(0b1111);
 
     // Buzzerの設定
     driver.buzzer = new BUZZER(GPIO_NUM_13);
