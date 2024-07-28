@@ -166,12 +166,12 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
     printf("finish parameter\n"); // ここまでOK
     // タスク優先順位 1 ~ 25    25が最高優先度
     xTaskCreatePinnedToCore(myTaskInterrupt,
-                            "interrupt", 8192, &interrupt, configMAX_PRIORITIES, NULL, APP_CPU_NUM);
+                            "interrupt", 8192, &interrupt, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);
     printf("finish interrupt task\n");
-    xTaskCreatePinnedToCore(myTaskAdc,
-                            "adc", 8192, &driver->adc, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);
+    //xTaskCreatePinnedToCore(myTaskAdc,
+                            //"adc", 8192, &driver->adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
     xTaskCreatePinnedToCore(myTaskLog,
-                            "log", 8192, &interrupt, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
+                            "log", 8192, &interrupt, configMAX_PRIORITIES - 3, NULL, APP_CPU_NUM);
     printf("finish task\n");
 
     /*char buffer[512];
