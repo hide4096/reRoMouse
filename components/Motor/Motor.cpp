@@ -37,6 +37,7 @@ Motor::Motor(gpio_num_t _ph_pin_R, gpio_num_t _en_pin_R, gpio_num_t _ph_pin_L, g
     timer_config.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT;
     timer_config.resolution_hz = BDC_MCPWM_TIMER_RESOLUTION_HZ;
     timer_config.period_ticks = BDC_MCPWM_DUTY_TICK_MAX;
+    timer_config.intr_priority = 0;
     timer_config.count_mode = MCPWM_TIMER_COUNT_MODE_UP;
     ESP_ERROR_CHECK(mcpwm_new_timer(&timer_config, &timer));
 

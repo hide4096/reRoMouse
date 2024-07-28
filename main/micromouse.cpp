@@ -163,7 +163,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
     map.GOAL_X = 4;
     map.GOAL_Y = 4;
 
-    printf("finish parameter\n");
+    printf("finish parameter\n"); // ここまでOK
     // タスク優先順位 1 ~ 25    25が最高優先度
     xTaskCreatePinnedToCore(myTaskInterrupt,
                             "interrupt", 8192, &interrupt, configMAX_PRIORITIES, NULL, APP_CPU_NUM);
