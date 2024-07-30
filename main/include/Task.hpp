@@ -6,7 +6,7 @@
 #include "sens_structs.hpp"
 
 void myTaskInterrupt(void *pvparam);
-void myTaskAdc(void *pvparam);
+//void myTaskAdc(void *pvparam);
 void myTaskLog(void *pvparam);
 
 #endif

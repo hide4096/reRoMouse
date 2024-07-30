@@ -163,16 +163,18 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
     map.GOAL_X = 4;
     map.GOAL_Y = 4;
 
+    ADS7066 *adc = driver->adc.get();
+
     printf("finish parameter\n"); // ここまでOK
     // タスク優先順位 1 ~ 25    25が最高優先度
     xTaskCreatePinnedToCore(myTaskInterrupt,
                             "interrupt", 8192, &interrupt, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);
     printf("finish interrupt task\n");
     //xTaskCreatePinnedToCore(myTaskAdc,
-                            //"adc", 8192, &driver->adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
+                            //"adc", 8192, &adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
     xTaskCreatePinnedToCore(myTaskLog,
                             "log", 8192, &interrupt, configMAX_PRIORITIES - 3, NULL, APP_CPU_NUM);
-    printf("finish task\n");
+    //printf("finish task\n");
 
     /*char buffer[512];
     vTaskList(buffer);
@@ -184,7 +186,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
     const int MODE_MIN = 0;
 
     /* メインループ */
-    printf("start main loop\n");
+    //printf("start main loop\n");
     while (1)
     {
         
@@ -240,7 +242,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
         //printf("vel:%f\n", val.current.vel);
         //printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
-        printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        //printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
         //printf("time:%d  mode:%d  flag:%d  Duty_L:%lf  Duty_R:%lf  Batt:%lf\n", time_count, mode, control.flag ,control.Duty_l, control.Duty_r, sens.BatteryVoltage);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);

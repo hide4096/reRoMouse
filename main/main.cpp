@@ -2,9 +2,15 @@
 #include <memory>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
+#include "freertos/queue.h"
 #include "driver/spi_master.h"
 #include "driver/i2c.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
+#include "esp_vfs.h"
+#include "esp_vfs_fat.h"
+#include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "NeoPixel.hpp"
 #include "structs.hpp"
@@ -13,8 +19,89 @@
 
 std::shared_ptr<t_drivers> driver = std::make_shared<t_drivers>();
 
+static SemaphoreHandle_t wallCharged;
+
+static void timer_chargeCompleted(void *arg)
+{
+    BaseType_t _highPriorityTask = pdFALSE;
+    xSemaphoreGiveFromISR(wallCharged, &_highPriorityTask);
+    portYIELD_FROM_ISR(_highPriorityTask);
+}
+
+void myTaskAdc(void *pvpram)
+{
+    // pvpram が指す既存の ADS7066 ポインタを std::shared_ptr に変換
+    ADS7066* raw_adc_ptr = static_cast<ADS7066 *>(pvpram);
+    std::shared_ptr<ADS7066> adc(raw_adc_ptr);
+
+    // t_drivers 構造体を作成し、adc ポインタを設定
+    std::shared_ptr<t_drivers> driver = std::make_shared<t_drivers>();
+    driver->adc = adc;
+
+    ESP_LOGI("ADC", "ADC Task Start");
+
+    for (int i = 0; i < 4; i++)
+    {
+        gpio_set_level(driver->adc->LED[i], 1);
+    }
+    driver->adc->_off = driver->adc->readOnTheFly(4);
+
+    esp_timer_create_args_t chargeTimerSetting = {
+        .callback = &timer_chargeCompleted,
+        .name = "wallCharge"};
+    esp_timer_handle_t chargeTimer;
+    ESP_ERROR_CHECK(esp_timer_create(&chargeTimerSetting, &chargeTimer));
+
+    wallCharged = xSemaphoreCreateBinary();
+
+    uint16_t charge_us = 60;
+    uint16_t rise_us = 15;
+
+    std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
+
+    while(1)
+    {
+        sens->BatteryVoltage = driver->adc->BatteryVoltage();
+        for (int i = 0; i < 4; i++)
+        {
+            if (i > 0)
+            {
+                driver->adc->_on = driver->adc->readOnTheFly(driver->adc->SENS[i]);
+                gpio_set_level(driver->adc->LED[i], 0);
+                esp_timer_start_once(chargeTimer, charge_us);
+                xSemaphoreTake(wallCharged, portMAX_DELAY);
+                gpio_set_level(driver->adc->LED[i], 1);
+                esp_rom_delay_us(rise_us);
+                if (i > 0)
+                    driver->adc->value[i - 1] = driver->adc->_on - driver->adc->_off;
+                driver->adc->_off = driver->adc->readOnTheFly(driver->adc->SENS[i]);
+            }
+                
+        }
+        driver->adc->_on = driver->adc->readOnTheFly(4);
+        driver->adc->value[3] = driver->adc->_on - driver->adc->_off;
+
+        sens->wall.val.fr = driver->adc->value[0];
+        sens->wall.val.l = driver->adc->value[2];
+        sens->wall.val.r = driver->adc->value[1];
+        sens->wall.val.fl = driver->adc->value[3];
+
+        vTaskDelay(1 /portTICK_PERIOD_MS);
+    }
+}
+
 extern "C" void app_main(void)
 {
+    gpio_config_t io_conf = {};
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask =
+        (1ULL << 10) | (1ULL << 17) | (1ULL << 18) | (1ULL << 21);
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+
     // IMU SPIバスの設定
     spi_bus_config_t bus_imu_adc;
     memset(&bus_imu_adc, 0, sizeof(bus_imu_adc));
@@ -78,6 +165,11 @@ extern "C" void app_main(void)
 
     // Motor driver Fan Moter GPIOの設定
     driver->mot = std::make_shared<Motor>(GPIO_NUM_41, GPIO_NUM_42, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_11, GPIO_NUM_40);
+
+    ADS7066 *adc = driver->adc.get();
+
+    xTaskCreatePinnedToCore(myTaskAdc,
+                            "adc", 8192, &adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
 
     //uint32_t h = 0, h1 = 0;
     //float t = 0.0;
