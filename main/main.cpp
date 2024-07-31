@@ -12,7 +12,6 @@
 #include "esp_vfs_fat.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
-#include "NeoPixel.hpp"
 #include "structs.hpp"
 #include "drivers.hpp"
 #include "micromouse.hpp"
