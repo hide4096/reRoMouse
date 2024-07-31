@@ -11,7 +11,7 @@
 
 std::vector<std::shared_ptr<UI>> ui;
 
-void MICROMOUSE(std::shared_ptr<t_drivers> driver);
+void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens);
 void set_interface();
 void call_task(UI *task, Adachi &motion);
 void set_param(Micromouse *task, t_sens_data *_sen, t_mouse_motion_val *_val, t_control *_control, t_map *_map);
@@ -37,12 +37,12 @@ void mode_select(uint8_t *_mode_num, Adachi &adachi, t_sens_data *sens, t_mouse_
 
 /* 基本的に全ての処理のをここにまとめ、mainで呼び出す。 */
 
-void MICROMOUSE(std::shared_ptr<t_drivers> driver)
+void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
 {
     // printf("start MICROMOUSE\n");
 
     /* 構造体のインスタンス生成 */
-    t_sens_data sens;
+    //t_sens_data sens;
     t_mouse_motion_val val;
     t_control control;
     t_map map;
@@ -242,7 +242,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver)
         //printf("vel:%f\n", val.current.vel);
         //printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
-        //printf("sens.wall.val.fl:%d sens.wall.val.l:%d sens.wall.val.r:%d sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
         //printf("time:%d  mode:%d  flag:%d  Duty_L:%lf  Duty_R:%lf  Batt:%lf\n", time_count, mode, control.flag ,control.Duty_l, control.Duty_r, sens.BatteryVoltage);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);

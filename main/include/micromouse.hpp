@@ -3,6 +3,6 @@
 
 #include "Interrupt.hpp"
 
-void MICROMOUSE(std::shared_ptr<t_drivers> driver);
+void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens);
 
 #endif

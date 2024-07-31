@@ -17,6 +17,7 @@
 #include "micromouse.hpp"
 
 std::shared_ptr<t_drivers> driver = std::make_shared<t_drivers>();
+t_sens_data sens;
 
 static SemaphoreHandle_t wallCharged;
 
@@ -30,14 +31,16 @@ static void timer_chargeCompleted(void *arg)
 void myTaskAdc(void *pvpram)
 {
     // pvpram が指す既存の ADS7066 ポインタを std::shared_ptr に変換
-    ADS7066* raw_adc_ptr = static_cast<ADS7066 *>(pvpram);
+    /*ADS7066* raw_adc_ptr = static_cast<ADS7066 *>(pvpram);
     std::shared_ptr<ADS7066> adc(raw_adc_ptr);
+    driver->led->set(0b1010);
 
     // t_drivers 構造体を作成し、adc ポインタを設定
     std::shared_ptr<t_drivers> driver = std::make_shared<t_drivers>();
-    driver->adc = adc;
+    driver->adc = adc;*/
 
     ESP_LOGI("ADC", "ADC Task Start");
+    driver->led->set(0b1000);
 
     for (int i = 0; i < 4; i++)
     {
@@ -52,40 +55,42 @@ void myTaskAdc(void *pvpram)
     ESP_ERROR_CHECK(esp_timer_create(&chargeTimerSetting, &chargeTimer));
 
     wallCharged = xSemaphoreCreateBinary();
+    driver->led->set(0b0101);
 
-    uint16_t charge_us = 60;
-    uint16_t rise_us = 15;
+    uint16_t charge_us = 100;
+    uint16_t rise_us = 30;
 
-    std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
+    // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
 
-    while(1)
+    while (1)
     {
-        sens->BatteryVoltage = driver->adc->BatteryVoltage();
+        sens.BatteryVoltage = driver->adc->BatteryVoltage();
         for (int i = 0; i < 4; i++)
         {
             if (i > 0)
             {
                 driver->adc->_on = driver->adc->readOnTheFly(driver->adc->SENS[i]);
-                gpio_set_level(driver->adc->LED[i], 0);
-                esp_timer_start_once(chargeTimer, charge_us);
-                xSemaphoreTake(wallCharged, portMAX_DELAY);
-                gpio_set_level(driver->adc->LED[i], 1);
-                esp_rom_delay_us(rise_us);
-                if (i > 0)
-                    driver->adc->value[i - 1] = driver->adc->_on - driver->adc->_off;
-                driver->adc->_off = driver->adc->readOnTheFly(driver->adc->SENS[i]);
             }
-                
+            gpio_set_level(driver->adc->LED[i], 0);
+            esp_timer_start_once(chargeTimer, charge_us);
+            xSemaphoreTake(wallCharged, portMAX_DELAY);
+            gpio_set_level(driver->adc->LED[i], 1);
+            esp_rom_delay_us(rise_us);
+            if (i > 0)
+                driver->adc->value[i - 1] = driver->adc->_on - driver->adc->_off;
+            driver->adc->_off = driver->adc->readOnTheFly(driver->adc->SENS[i]);
         }
         driver->adc->_on = driver->adc->readOnTheFly(4);
         driver->adc->value[3] = driver->adc->_on - driver->adc->_off;
 
-        sens->wall.val.fr = driver->adc->value[0];
-        sens->wall.val.l = driver->adc->value[2];
-        sens->wall.val.r = driver->adc->value[1];
-        sens->wall.val.fl = driver->adc->value[3];
+        sens.wall.val.fr = driver->adc->value[0];
+        sens.wall.val.r = driver->adc->value[2];
+        sens.wall.val.l = driver->adc->value[1];
+        sens.wall.val.fl = driver->adc->value[3];
 
-        vTaskDelay(1 /portTICK_PERIOD_MS);
+        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }
 
@@ -153,8 +158,7 @@ extern "C" void app_main(void)
     // Buzzer GPIOの設定
     driver->bz = std::make_shared<BUZZER>(GPIO_NUM_13);
     static BUZZER::buzzer_score_t pc98[] = {
-        {2000,100},{1000,100}
-    };
+        {2000, 100}, {1000, 100}};
     driver->bz->play_melody(pc98, 2);
 
     // NeoPixel GPIOの設定
@@ -165,18 +169,21 @@ extern "C" void app_main(void)
     // Motor driver Fan Moter GPIOの設定
     driver->mot = std::make_shared<Motor>(GPIO_NUM_41, GPIO_NUM_42, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_11, GPIO_NUM_40);
 
+    driver->led->set(0b1110);
     ADS7066 *adc = driver->adc.get();
+    driver->led->set(0b1100);
 
     xTaskCreatePinnedToCore(myTaskAdc,
-                            "adc", 8192, &adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
+                            "adc", 8192, adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
 
-    //uint32_t h = 0, h1 = 0;
-    //float t = 0.0;
+    // uint32_t h = 0, h1 = 0;
+    // float t = 0.0;
     while (1)
     {
-        MICROMOUSE(driver);
+        printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        //MICROMOUSE(driver, sens);
 
-        //motor.setMotorSpeed((-0.3), -(0.3));
+        // motor.setMotorSpeed((-0.3), -(0.3));
         /*h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();
@@ -188,7 +195,7 @@ extern "C" void app_main(void)
         if (t > 2 * M_PI)
             t = 0.0;
         */
-        
+
         /*h = EncL.readAngle();
         h1 = EncR.readAngle();
 
@@ -201,6 +208,7 @@ extern "C" void app_main(void)
         //printf("L:%ld    R:%ld\n", h, h1);
         //printf("L:%f    R:%f\n", WheelAngle_L, WheelAngle_R);
         printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);*/
+        //ESP_LOGI("MAIN", "MAIN LOOP");
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
