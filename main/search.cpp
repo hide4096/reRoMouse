@@ -21,8 +21,10 @@ void Search::main_task()
     map->flag = SEARCH;
     control->log_flag = TRUE;
     motion.InitMaze();
+    ESP_LOGI("Init", "Maze");
     map->search_count_flag = TRUE;
     map->search_time = 0;
+    ESP_LOGI("Main", "Search");
     motion.search_adachi(map->GOAL_X,map->GOAL_Y);
     control->log_flag = FALSE;
     map_write(map);

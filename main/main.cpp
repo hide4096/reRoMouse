@@ -16,6 +16,11 @@
 #include "drivers.hpp"
 #include "micromouse.hpp"
 
+#define INIT_STATE_FL (8)
+#define INIT_STATE_L (- 58)
+#define INIT_STATE_R (18)
+#define INIT_STATE_FR (0)
+
 std::shared_ptr<t_drivers> driver = std::make_shared<t_drivers>();
 t_sens_data sens;
 
@@ -57,8 +62,8 @@ void myTaskAdc(void *pvpram)
     wallCharged = xSemaphoreCreateBinary();
     driver->led->set(0b0101);
 
-    uint16_t charge_us = 100;
-    uint16_t rise_us = 30;
+    uint16_t charge_us = 60; // コンデンサへの充電時間
+    uint16_t rise_us = 30; // 放電してからセンサの読み取りを開始するまでの時間
 
     // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
 
@@ -69,7 +74,7 @@ void myTaskAdc(void *pvpram)
         {
             if (i > 0)
             {
-                driver->adc->_on = driver->adc->readOnTheFly(driver->adc->SENS[i]);
+                driver->adc->_on = driver->adc->readOnTheFly(driver->adc->SENS[i]); // readOnTheFly は 送ったアドレスのひとつ前に送った値を返す
             }
             gpio_set_level(driver->adc->LED[i], 0);
             esp_timer_start_once(chargeTimer, charge_us);
@@ -83,12 +88,51 @@ void myTaskAdc(void *pvpram)
         driver->adc->_on = driver->adc->readOnTheFly(4);
         driver->adc->value[3] = driver->adc->_on - driver->adc->_off;
 
-        sens.wall.val.fr = driver->adc->value[0];
-        sens.wall.val.r = driver->adc->value[2];
-        sens.wall.val.l = driver->adc->value[1];
-        sens.wall.val.fl = driver->adc->value[3];
+        // sens_dir の都合上,uintにできないのでintでマイナス値の処理を入れる
+
+        sens.wall.val.fr = driver->adc->value[0] + INIT_STATE_FL;
+        int16_t fr = sens.wall.val.fr % 65536;
+        if (fr >= 0)
+        {
+            sens.wall.val.fr = fr;
+        }
+        else
+        {
+            sens.wall.val.fr = -fr;
+        }
+        sens.wall.val.r = driver->adc->value[2] + INIT_STATE_R;
+        int16_t r = sens.wall.val.r % 65536;
+        if (r >= 0)
+        {
+            sens.wall.val.r = r;
+        }
+        else
+        {
+            sens.wall.val.r = -r;
+        }
+        sens.wall.val.l = driver->adc->value[1] + INIT_STATE_L;
+        int16_t l = sens.wall.val.l % 65536;
+        if (l >= 0)
+        {
+            sens.wall.val.l = l;
+        }
+        else
+        {
+            sens.wall.val.l = -l;
+        }
+        sens.wall.val.fl = driver->adc->value[3] + INIT_STATE_FR;
+        int16_t fl = sens.wall.val.fl % 65536;
+        if (fl >= 0)
+        {
+            sens.wall.val.fl = fl;
+        }
+        else
+        {
+            sens.wall.val.fl = -fl;
+        }
 
         //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        //printf("r:%d\n", r);
 
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -180,10 +224,11 @@ extern "C" void app_main(void)
     // float t = 0.0;
     while (1)
     {
-        printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        //MICROMOUSE(driver, sens);
+        //printf("BAT:%f\n", sens.BatteryVoltage);
+        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        MICROMOUSE(driver, &sens);
 
-        // motor.setMotorSpeed((-0.3), -(0.3));
+        //driver->mot->setMotorSpeed((-0.5), -(0.5));
         /*h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();

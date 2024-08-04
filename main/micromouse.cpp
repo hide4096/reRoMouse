@@ -11,7 +11,7 @@
 
 std::vector<std::shared_ptr<UI>> ui;
 
-void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens);
+void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens);
 void set_interface();
 void call_task(UI *task, Adachi &motion);
 void set_param(Micromouse *task, t_sens_data *_sen, t_mouse_motion_val *_val, t_control *_control, t_map *_map);
@@ -37,7 +37,7 @@ void mode_select(uint8_t *_mode_num, Adachi &adachi, t_sens_data *sens, t_mouse_
 
 /* 基本的に全ての処理のをここにまとめ、mainで呼び出す。 */
 
-void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
+void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
 {
     // printf("start MICROMOUSE\n");
 
@@ -61,7 +61,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
     Interrupt interrupt;
     interrupt.set_device_driver(driver);
     printf("finish set device\n");
-    interrupt.ptr_by_sensor(&sens);
+    interrupt.ptr_by_sensor(sens);
     interrupt.ptr_by_motion(&val);
     interrupt.ptr_by_control(&control);
     interrupt.ptr_by_map(&map);
@@ -73,7 +73,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
     // モーション系
     Adachi motion;
     motion.set_device_driver(driver);
-    motion.ptr_by_sensor(&sens);
+    motion.ptr_by_sensor(sens);
     motion.ptr_by_motion(&val);
     motion.ptr_by_control(&control);
     motion.ptr_by_map(&map);
@@ -82,10 +82,10 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
     printf("finish motion struct\n");
 
     // センサ系
-    driver->adc->Shar_SensData(&sens);
-    driver->imu->Shar_SensData(&sens);
-    driver->encR->Shar_SensData(&sens);
-    driver->encL->Shar_SensData(&sens);
+    driver->adc->Shar_SensData(sens);
+    driver->imu->Shar_SensData(sens);
+    driver->encR->Shar_SensData(sens);
+    driver->encL->Shar_SensData(sens);
 
     printf("finish sensor struct\n");
 
@@ -105,15 +105,15 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
     //val.tar.acc = 0.5;
     val.max.acc = 1.0;
     //val.tar.vel = 0.3;
-    val.max.vel = 0.3;
+    val.max.vel = 0.2;
     val.min.vel = 0.05;
-    val.end.vel = 0.3;
+    val.end.vel = 0.2;
 
     // 角速度
     val.tar.ang_acc = 0.0;
-    val.max.ang_acc = M_PI*5.0;
+    val.max.ang_acc = M_PI*4.0;
     val.tar.ang_vel = 0.0;
-    val.max.ang_vel = M_PI;
+    val.max.ang_vel = M_PI/2.0;
     val.min.ang_vel = M_PI/5.0;
     val.end.ang_vel = 0.0;
 
@@ -121,23 +121,23 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
     //control.v.Kp = pid_gain.speed_Kp;
     //control.v.Ki = pid_gain.speed_Ki;
     //control.v.Kd = pid_gain.speed_Kd;
-    control.v.Kp = 50.0;
-    control.v.Ki = 100.0;
+    control.v.Kp = 40.0; // 50
+    control.v.Ki = 100.0; // 100
     control.v.Kd = 0.0;
 
     // 角速度制御
     //control.o.Kp = pid_gain.ang_vel_Kp;
     //control.o.Ki = pid_gain.ang_vel_Ki;
     //control.o.Kd = pid_gain.ang_vel_Kd;
-    control.o.Kp = 0.1;
-    control.o.Ki = 30.0;
+    control.o.Kp = 0.10; // 0.1
+    control.o.Ki = 50.0; // 30
     control.o.Kd = 0.0;
 
     // 壁制御
     //control.wall.Kp = pid_gain.wall_Kp;
     //control.wall.Ki = pid_gain.wall_Ki;
     //control.wall.Kd = pid_gain.wall_Kd;
-    control.wall.Kp = 0.0;
+    control.wall.Kp = 0.0001;
     control.wall.Ki = 0.0;
     control.wall.Kd = 0.0;
 
@@ -150,14 +150,14 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
     //sens.wall.th_control.r = wall_threshold.th_control_r;
     //sens.wall.ref.l = wall_threshold.ref_l;
     //sens.wall.ref.r = wall_threshold.ref_r;
-    sens.wall.th_wall.fl = 42;
-    sens.wall.th_wall.fr = 47;
-    sens.wall.th_wall.l = 42;
-    sens.wall.th_wall.r = 55;
-    sens.wall.th_control.l = 100;
-    sens.wall.th_control.r = 100;
-    sens.wall.ref.l = 141;
-    sens.wall.ref.r = 170;
+    sens->wall.th_wall.fl = 1054;
+    sens->wall.th_wall.fr = 343;
+    sens->wall.th_wall.l = 1145;
+    sens->wall.th_wall.r = 1039;
+    sens->wall.th_control.l = 3000; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
+    sens->wall.th_control.r = 3000;
+    sens->wall.ref.l = 4269;
+    sens->wall.ref.r = 3912;
 
     // ゴール座標
     map.GOAL_X = 4;
@@ -195,12 +195,12 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
         /*vTaskList(buffer);
         printf("Task execution statistics:\n%s", buffer);*/
 
-        if (sens.wall.val.fl + sens.wall.val.l + sens.wall.val.r + sens.wall.val.fr > 3000)
+        if (sens->wall.val.fl + sens->wall.val.l + sens->wall.val.r + sens->wall.val.fr > 40000)
         {
 
             driver->led->set(0b1111);
-            sens.gyro.ref = driver->imu->surveybias(2000);
-            mode_select(&mode, motion, &sens, &val, &control, &map);
+            sens->gyro.ref = driver->imu->surveybias(2000);
+            mode_select(&mode, motion, sens, &val, &control, &map);
             control.flag = FALSE;
         }
         /*if (time_count > 500)
@@ -238,11 +238,12 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data sens)
             time_count = 0;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
+        printf("mode:%d\n", mode);
         //printf("time:%d\n", control.time_count);
         //printf("vel:%f\n", val.current.vel);
         //printf("rad:%f\n", val.current.rad);
         //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
-        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens->wall.val.fl, sens->wall.val.l, sens->wall.val.r, sens->wall.val.fr);
         //printf("time:%d  mode:%d  flag:%d  Duty_L:%lf  Duty_R:%lf  Batt:%lf\n", time_count, mode, control.flag ,control.Duty_l, control.Duty_r, sens.BatteryVoltage);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);

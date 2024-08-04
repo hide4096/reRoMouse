@@ -1,7 +1,7 @@
 #include "include/Interrupt.hpp"
 
 //#define ENC_MAX 4096
-#define TIRE_DIAMETER 0.01368
+#define TIRE_DIAMETER 0.0138
 #define MMPP TIRE_DIAMETER*M_PI / ENC_MAX
 
 
