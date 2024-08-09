@@ -113,7 +113,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     val.tar.ang_acc = 0.0;
     val.max.ang_acc = M_PI*4.0;
     val.tar.ang_vel = 0.0;
-    val.max.ang_vel = M_PI/2.0;
+    val.max.ang_vel = M_PI;
     val.min.ang_vel = M_PI/5.0;
     val.end.ang_vel = 0.0;
 
@@ -121,16 +121,15 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //control.v.Kp = pid_gain.speed_Kp;
     //control.v.Ki = pid_gain.speed_Ki;
     //control.v.Kd = pid_gain.speed_Kd;
-    control.v.Kp = 40.0; // 50
-    control.v.Ki = 100.0; // 100
-    control.v.Kd = 0.0;
-
+    control.v.Kp = 30.0; // 50
+    control.v.Ki = 300.0; // 100
+    control.v.Kd = 0.0; 
     // 角速度制御
     //control.o.Kp = pid_gain.ang_vel_Kp;
     //control.o.Ki = pid_gain.ang_vel_Ki;
     //control.o.Kd = pid_gain.ang_vel_Kd;
-    control.o.Kp = 0.10; // 0.1
-    control.o.Ki = 50.0; // 30
+    control.o.Kp = 0.3; // 0.1
+    control.o.Ki = 30.0; // 30
     control.o.Kd = 0.0;
 
     // 壁制御
@@ -150,18 +149,21 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //sens.wall.th_control.r = wall_threshold.th_control_r;
     //sens.wall.ref.l = wall_threshold.ref_l;
     //sens.wall.ref.r = wall_threshold.ref_r;
-    sens->wall.th_wall.fl = 1054;
-    sens->wall.th_wall.fr = 343;
+    sens->wall.th_wall.fl = 1854;
+    sens->wall.th_wall.fr = 943;
     sens->wall.th_wall.l = 1145;
     sens->wall.th_wall.r = 1039;
     sens->wall.th_control.l = 3000; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
     sens->wall.th_control.r = 3000;
-    sens->wall.ref.l = 4269;
-    sens->wall.ref.r = 3912;
+    sens->wall.ref.l = 3812; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
+    sens->wall.ref.r = 3969;
+
+    // 3612
+    // 3769
 
     // ゴール座標
-    map.GOAL_X = 4;
-    map.GOAL_Y = 4;
+    map.GOAL_X = 3;
+    map.GOAL_Y = 3;
 
     ADS7066 *adc = driver->adc.get();
 
@@ -238,7 +240,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
             time_count = 0;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
-        printf("mode:%d\n", mode);
+        //printf("mode:%d\n", mode);
         //printf("time:%d\n", control.time_count);
         //printf("vel:%f\n", val.current.vel);
         //printf("rad:%f\n", val.current.rad);

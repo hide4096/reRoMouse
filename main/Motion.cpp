@@ -6,7 +6,7 @@
 #define SECTION_HALF 0.045
 #define TURN_HALF M_PI
 #define TURN_QUARTER M_PI / 2.0
-#define OFFSET_DISTANCE 0.021
+#define OFFSET_DISTANCE 0.018
 
 Motion::Motion()
 { /*std::cout << "Motion" << std::endl;*/
@@ -94,7 +94,7 @@ void Motion::run()
 void Motion::run_half()
 {
     control->flag = TRUE;       // 制御ON
-    sens->wall.control = TRUE; // 壁制御OFF
+    sens->wall.control = FALSE; // 壁制御OFF
 
     val->I.vel_error = 0.0;
     val->I.ang_error = 0.0;
