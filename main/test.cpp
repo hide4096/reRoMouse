@@ -38,16 +38,17 @@ void Test2::main_task()
 {
     control->log_flag = TRUE;
     val->sum.len = 0.0;
+    motion.offset2();
     motion.run_half();
     motion.run(); // 1
     motion.run(); // 2
-    motion.run(); // 3
-    motion.run(); // 4
-    motion.run(); // 5
-    motion.run(); // 6
-    motion.run(); // 7
-    motion.run(); // 8
-    motion.run(); // 9
+    //motion.run(); // 3
+    //motion.run(); // 4
+    //motion.run(); // 5
+    //motion.run(); // 6
+    //motion.run(); // 7
+    //motion.run(); // 8
+    //motion.run(); // 9
     motion.stop();  // OK
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
@@ -128,6 +129,7 @@ void Test6::main_task()
 {
     //control->log_flag = TRUE;
     motion.stop();  // OK
+    //motion.back();
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
 }

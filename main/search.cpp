@@ -55,11 +55,11 @@ void All_Search::main_task()
     motion.InitMaze();
     map->search_count_flag = TRUE;
     map->search_time = 0;
-    motion.search_adachi(map->GOAL_X,map->GOAL_Y);
+    motion.search_adachi2(map->GOAL_X,map->GOAL_Y);
     control->log_flag = FALSE;
     
-    map->flag = ALL_SEARCH;
-    motion.search_adachi(0,0);
+    //map->flag = ALL_SEARCH;
+    //motion.search_adachi(0,0);
     map_write(map);
     //std::cout << "All_Search" << std::endl;
 }

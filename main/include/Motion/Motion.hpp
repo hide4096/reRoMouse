@@ -19,11 +19,13 @@ class Motion : public Micromouse
         void set_device_driver(std::shared_ptr<t_drivers> driver) override;
         void GetSemphrHandle(SemaphoreHandle_t *_on_logging);
         void run();
+        void run2();
         void run_half();
         void turn_left();
         void turn_right();
         void turn_half();
         void stop();
+        void stop2();
         void back();
         void slalom();
         void check_enkaigei();

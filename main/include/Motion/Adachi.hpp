@@ -7,6 +7,7 @@ class Adachi : public Motion
 {
 public:
     void search_adachi(int gx, int gy);
+    void search_adachi2(int gx, int gy);
     void fast_run(int gx, int gy);
     void InitMaze();
 

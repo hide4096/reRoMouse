@@ -195,6 +195,24 @@ void Interrupt::feedback_control()
     {
         mot->setMotorSpeed(0.0, 0.0);
     }
+    if (control->test_flag == TRUE)
+    {
+        //mot->setMotorSpeed(control->test_Duty_r,control->test_Duty_l);
+        // 速度制御
+        val->current.vel_error = val->tar.vel - val->current.vel;
+        val->I.vel_error += val->current.vel_error / 1000.0;
+        val->p.vel_error = (val->p.vel - val->current.vel) * 1000.0;
+
+        control->V_l = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
+        control->V_r = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
+
+        control->Duty_l = control->V_l / sens->BatteryVoltage;  // zero division error に注意
+        control->Duty_r = control->V_r / sens->BatteryVoltage;
+
+        mot->setMotorSpeed(control->Duty_r, control->Duty_l);
+
+    }
+    
 
     // std::cout << "FB_ctl" << std::endl;
     return;

@@ -220,13 +220,16 @@ extern "C" void app_main(void)
     xTaskCreatePinnedToCore(myTaskAdc,
                             "adc", 8192, adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
 
-    // uint32_t h = 0, h1 = 0;
+    uint32_t h = 0, h1 = 0;
     // float t = 0.0;
     while (1)
     {
+        h = driver->imu->accelZ() * 360;
+        driver->np->set_hsv({h, 100, 10}, 0, 1);
+        driver->np->show();
         //printf("BAT:%f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        MICROMOUSE(driver, &sens);
+        //MICROMOUSE(driver, &sens);
 
         //driver->mot->setMotorSpeed((-0.5), -(0.5));
         /*h = imu.accelZ() * 360;

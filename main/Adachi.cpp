@@ -347,6 +347,179 @@ int Adachi::get_nextdir(int x, int y, int mask, t_direction *dir)
 												   // 演算の意味はmytyedef.h内のenum宣言から。
 }
 
+void Adachi::search_adachi2(int gx, int gy)
+{
+
+	// 引数gx,gyに向かって足立法で迷路を探索する
+	t_direction glob_nextdir; // 次に向かう方向を記録する変数
+
+	//if ((map->pos.x == 0) && (map->pos.y == 0))
+	//{
+		offset2();
+	//}
+
+	switch (get_nextdir(gx, gy, MASK_SEARCH, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
+	{
+	case FRONT:
+		run_half();
+		// printf("run_half\n");
+		break;
+
+	case RIGHT:
+		turn_right_2();
+		// printf("turn_right\n");
+		break;
+
+	case LEFT:
+		turn_left_2();
+		// printf("turn_left\n");
+		break;
+
+	case REAR:
+		turn_half();
+		// printf("turn_half\n");
+		break;
+	}
+
+	map->pos.dir = glob_nextdir; // 方向を更新
+
+	// 向いた方向によって自分の座標を更新する
+	switch (map->pos.dir)
+	{
+	case NORTH:
+		map->pos.y++; // 北を向いた時はY座標を増やす
+		break;
+
+	case EAST:
+		map->pos.x++; // 東を向いた時はX座標を増やす
+		break;
+
+	case SOUTH:
+		map->pos.y--; // 南を向いた時はY座標を減らす
+		break;
+
+	case WEST:
+		map->pos.x--; // 西を向いたときはX座標を減らす
+		break;
+	}
+	//printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+
+	while ((map->pos.x != gx) || (map->pos.y != gy))
+	{ // ゴールするまで繰り返す
+
+		set_wall(map->pos.x, map->pos.y); // 壁をセット
+
+		switch (get_nextdir(gx, gy, MASK_SEARCH, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
+		{
+		case FRONT:
+			run2();
+			// printf("run\n");
+			break;
+
+		case RIGHT:
+			stop2();
+			turn_right_2();
+			run_half();
+			// printf("turn_right\n");
+			break;
+
+		case LEFT:
+			stop2();
+			turn_left_2();
+			run_half();
+			// printf("turn_left\n");
+			break;
+
+		case REAR:
+			//stop2();
+			if ((sens->wall.val.fl > 1000) && (sens->wall.val.fr > 500) && (sens->wall.val.l > 2000))
+			{
+				stop();
+				turn_right_2();
+				back();
+				offset();
+				turn_right_2();
+				back();
+				offset2();
+			}
+			else if ((sens->wall.val.fl > 1000) && (sens->wall.val.fr > 500) && (sens->wall.val.r > 1000))
+			{
+				stop();
+				turn_left_2();
+				back();
+				offset();
+				turn_left_2();
+				back();
+				offset2();
+			}
+			else if ((sens->wall.val.fl > 1000) && (sens->wall.val.fr > 500))
+			{
+				stop();
+				turn_half();
+				back();
+				offset2();
+			}
+			else
+			{
+				stop();
+				turn_half();
+			}
+			/*stop();
+			turn_right_2();
+			back();
+			offset();
+			turn_right_2();
+			back();
+			offset2();
+			*/
+			
+			run_half();
+			// printf("turn_half\n");
+			break;
+		}
+
+		map->pos.dir = glob_nextdir; // 方向を更新
+
+		// 向いた方向によって自分の座標を更新する
+		switch (map->pos.dir)
+		{
+		case NORTH:
+			map->pos.y++; // 北を向いた時はY座標を増やす
+			break;
+
+		case EAST:
+			map->pos.x++; // 東を向いた時はX座標を増やす
+			break;
+
+		case SOUTH:
+			map->pos.y--; // 南を向いた時はY座標を減らす
+			break;
+
+		case WEST:
+			map->pos.x--; // 西を向いたときはX座標を減らす
+			break;
+		}
+		// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+
+		if (map->flag == ALL_SEARCH)
+		{
+			if (map->search_time > 60000)
+			{
+				//init_map(gx, gy);
+			}
+			
+		}
+		
+	}
+	set_wall(map->pos.x, map->pos.y); // 壁をセット
+
+	stop();
+	//("stop\n");
+	turn_half();
+	// printf("turn_half\n");
+	map->pos.dir = static_cast<t_direction>((map->pos.dir + 6) % 4);
+}
+
 void Adachi::search_adachi(int gx, int gy)
 {
 
@@ -432,7 +605,47 @@ void Adachi::search_adachi(int gx, int gy)
 
 		case REAR:
 			stop();
-			turn_half();
+			if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.l == TRUE)
+			{
+				//stop();
+				turn_right_2();
+				back();
+				offset();
+				turn_right_2();
+				back();
+				offset2();
+			}
+			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.r == TRUE)
+			{
+				//stop();
+				turn_left_2();
+				back();
+				offset();
+				turn_left_2();
+				back();
+				offset2();
+			}
+			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE)
+			{
+				//stop();
+				turn_half();
+				back();
+				offset2();
+			}
+			else
+			{
+				//stop();
+				turn_half();
+			}
+			/*stop();
+			turn_right_2();
+			back();
+			offset();
+			turn_right_2();
+			back();
+			offset2();
+			*/
+			
 			run_half();
 			// printf("turn_half\n");
 			break;
