@@ -153,8 +153,8 @@ extern "C" void app_main(void)
     // IMU SPIバスの設定
     spi_bus_config_t bus_imu_adc;
     memset(&bus_imu_adc, 0, sizeof(bus_imu_adc));
-    bus_imu_adc.miso_io_num = GPIO_NUM_4;
-    bus_imu_adc.mosi_io_num = GPIO_NUM_2;
+    bus_imu_adc.miso_io_num = GPIO_NUM_2;
+    bus_imu_adc.mosi_io_num = GPIO_NUM_4;
     bus_imu_adc.sclk_io_num = GPIO_NUM_3;
     bus_imu_adc.quadwp_io_num = -1;
     bus_imu_adc.quadhd_io_num = -1;
@@ -162,7 +162,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_imu_adc, SPI_DMA_CH_AUTO));
 
     driver->adc = std::make_shared<ADS7066>(SPI2_HOST, GPIO_NUM_5);
-    driver->imu = std::make_shared<MPU6500>(SPI2_HOST, GPIO_NUM_14);
+    driver->imu = std::make_shared<MPU6500>(SPI2_HOST, GPIO_NUM_1);
 
     // Encoder SPIバスの設定
     spi_bus_config_t bus_enc;
@@ -179,7 +179,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &bus_enc, SPI_DMA_DISABLED));
 
     driver->encL = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_6, 1);
-    driver->encR = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_1, 0);
+    driver->encR = std::make_shared<MA730>(SPI3_HOST, GPIO_NUM_14, 0);
 
     // LED driver I2Cバスの設定
     i2c_config_t led_conf;
@@ -200,13 +200,13 @@ extern "C" void app_main(void)
     driver->led->set(0b1111);
 
     // Buzzer GPIOの設定
-    driver->bz = std::make_shared<BUZZER>(GPIO_NUM_13);
+    driver->bz = std::make_shared<BUZZER>(GPIO_NUM_15);
     static BUZZER::buzzer_score_t pc98[] = {
         {2000, 100}, {1000, 100}};
     driver->bz->play_melody(pc98, 2);
 
     // NeoPixel GPIOの設定
-    driver->np = std::make_shared<NeoPixel>(GPIO_NUM_15, 1);
+    driver->np = std::make_shared<NeoPixel>(GPIO_NUM_13, 1);
     driver->np->set_hsv({0, 0, 0}, 0, 1);
     driver->np->show();
 
