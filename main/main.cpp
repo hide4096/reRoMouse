@@ -16,9 +16,9 @@
 #include "drivers.hpp"
 #include "micromouse.hpp"
 
-#define INIT_STATE_FL (8)
-#define INIT_STATE_L (- 58)
-#define INIT_STATE_R (18)
+#define INIT_STATE_FL (0)
+#define INIT_STATE_L (0)
+#define INIT_STATE_R (0)
 #define INIT_STATE_FR (0)
 
 std::shared_ptr<t_drivers> driver = std::make_shared<t_drivers>();
@@ -60,10 +60,10 @@ void myTaskAdc(void *pvpram)
     ESP_ERROR_CHECK(esp_timer_create(&chargeTimerSetting, &chargeTimer));
 
     wallCharged = xSemaphoreCreateBinary();
-    driver->led->set(0b0101);
+    driver->led->set(0b1111);
 
-    uint16_t charge_us = 60; // コンデンサへの充電時間
-    uint16_t rise_us = 30; // 放電してからセンサの読み取りを開始するまでの時間
+    uint16_t charge_us = 1000; // コンデンサへの充電時間
+    uint16_t rise_us = 10; // 放電してからセンサの読み取りを開始するまでの時間
 
     // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
 
@@ -90,7 +90,11 @@ void myTaskAdc(void *pvpram)
 
         // sens_dir の都合上,uintにできないのでintでマイナス値の処理を入れる
 
-        sens.wall.val.fr = driver->adc->value[0] + INIT_STATE_FL;
+        sens.wall.val.fr = driver->adc->value[0];
+        sens.wall.val.r = driver->adc->value[2];
+        sens.wall.val.l = driver->adc->value[1];
+        sens.wall.val.fl = driver->adc->value[3];
+        /*sens.wall.val.fr = driver->adc->value[0] + INIT_STATE_FL;
         int16_t fr = sens.wall.val.fr % 65536;
         if (fr >= 0)
         {
@@ -129,7 +133,7 @@ void myTaskAdc(void *pvpram)
         else
         {
             sens.wall.val.fl = -fl;
-        }
+        }*/
 
         //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
         //printf("r:%d\n", r);
@@ -229,6 +233,7 @@ extern "C" void app_main(void)
         driver->np->show();
         //printf("BAT:%f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        printf("driver->adc->off:%d\n", driver->adc->_off);
         //MICROMOUSE(driver, &sens);
 
         //driver->mot->setMotorSpeed((-0.5), -(0.5));
@@ -244,8 +249,8 @@ extern "C" void app_main(void)
             t = 0.0;
         */
 
-        /*h = EncL.readAngle();
-        h1 = EncR.readAngle();
+        /*h = driver->encL->readAngle();
+        h1 = driver->encR->readAngle();
 
         float WheelAngle_L = 2.0 * M_PI * h / 16384.0;
         float WheelAngle_R = 2.0 * M_PI * h1 / 16384.0;
