@@ -30,8 +30,8 @@ public:
     uint16_t value[4];
     //uint16_t charge_us = 60;
     //uint16_t rise_us = 15;
-    const uint8_t SENS[4] = {0, 7, 1, 6}; // OLD : FR L R FL  NEW : FR FL R L
-    const gpio_num_t LED[4] = {GPIO_NUM_21, GPIO_NUM_10, GPIO_NUM_18, GPIO_NUM_17}; // OLD : FR L R FL  NEW : FL FR L R
+    const uint8_t SENS[4] = {0, 6, 1, 7}; // OLD : FR L R FL  NEW : FR FL R L
+    const gpio_num_t LED[4] = {GPIO_NUM_10, GPIO_NUM_18, GPIO_NUM_17, GPIO_NUM_21}; // OLD : FR L R FL  NEW : FL FR L R
 
 
 

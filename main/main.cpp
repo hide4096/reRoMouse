@@ -62,7 +62,7 @@ void myTaskAdc(void *pvpram)
     wallCharged = xSemaphoreCreateBinary();
     driver->led->set(0b1111);
 
-    uint16_t charge_us = 1000; // コンデンサへの充電時間
+    uint16_t charge_us = 100000; // コンデンサへの充電時間
     uint16_t rise_us = 10; // 放電してからセンサの読み取りを開始するまでの時間
 
     // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
@@ -225,7 +225,7 @@ extern "C" void app_main(void)
                             "adc", 8192, adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
 
     uint32_t h = 0, h1 = 0;
-    // float t = 0.0;
+    float t = 0.0;
     while (1)
     {
         h = driver->imu->accelZ() * 360;
@@ -233,17 +233,17 @@ extern "C" void app_main(void)
         driver->np->show();
         //printf("BAT:%f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        printf("driver->adc->off:%d\n", driver->adc->_off);
+        //printf("driver->adc->off:%d\n", driver->adc->_off);
         //MICROMOUSE(driver, &sens);
 
-        //driver->mot->setMotorSpeed((-0.5), -(0.5));
+        driver->mot->setMotorSpeed((-0.5), -(0.5));
         /*h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();
 
         printf("Z:%ld\n", h);*/
         /*
-        motor.setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
+        driver->mot->setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
         t = t + 0.01;
         if (t > 2 * M_PI)
             t = 0.0;
