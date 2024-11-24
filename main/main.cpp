@@ -226,28 +226,31 @@ extern "C" void app_main(void)
 
     uint32_t h = 0, h1 = 0;
     float t = 0.0;
+    float rad = 0.0;
     while (1)
     {
         h = driver->imu->accelZ() * 360;
         driver->np->set_hsv({h, 100, 10}, 0, 1);
         driver->np->show();
-        //printf("BAT:%f\n", sens.BatteryVoltage);
+        //printf("BAT : %f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
         //printf("driver->adc->off:%d\n", driver->adc->_off);
         //MICROMOUSE(driver, &sens);
 
-        driver->mot->setMotorSpeed((-0.5), -(0.5));
-        /*h = imu.accelZ() * 360;
-        np.set_hsv({h, 100, 10}, 0, 1);
-        np.show();
+        //driver->mot->setMotorSpeed((-0.5), -(0.5));
 
-        printf("Z:%ld\n", h);*/
+        //printf("Z : %ld\n", h);
         /*
         driver->mot->setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
         t = t + 0.01;
         if (t > 2 * M_PI)
             t = 0.0;
         */
+
+        //printf("gyroZ : %f\n", driver->imu->gyroZ());
+        //printf("ang_vel : %f\n", driver->imu->gyroZ() * (M_PI / 180.0));
+        rad += driver->imu->gyroZ() * (M_PI / 180.0) / 1000.0;
+        printf("rad : %f\n", rad);
 
         /*h = driver->encL->readAngle();
         h1 = driver->encR->readAngle();
