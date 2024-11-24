@@ -17,7 +17,7 @@
 #include "micromouse.hpp"
 
 #define INIT_STATE_FL (8)
-#define INIT_STATE_L (- 58)
+#define INIT_STATE_L (-58)
 #define INIT_STATE_R (18)
 #define INIT_STATE_FR (0)
 
@@ -63,7 +63,7 @@ void myTaskAdc(void *pvpram)
     driver->led->set(0b0101);
 
     uint16_t charge_us = 60; // コンデンサへの充電時間
-    uint16_t rise_us = 30; // 放電してからセンサの読み取りを開始するまでの時間
+    uint16_t rise_us = 30;   // 放電してからセンサの読み取りを開始するまでの時間
 
     // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
 
@@ -131,8 +131,8 @@ void myTaskAdc(void *pvpram)
             sens.wall.val.fl = -fl;
         }
 
-        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        //printf("r:%d\n", r);
+        // printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        // printf("r:%d\n", r);
 
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -221,17 +221,18 @@ extern "C" void app_main(void)
                             "adc", 8192, adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
 
     uint32_t h = 0, h1 = 0;
+    float rad = 0.0;
     // float t = 0.0;
     while (1)
     {
         h = driver->imu->accelZ() * 360;
         driver->np->set_hsv({h, 100, 10}, 0, 1);
         driver->np->show();
-        //printf("BAT:%f\n", sens.BatteryVoltage);
-        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        //MICROMOUSE(driver, &sens);
+        // printf("BAT:%f\n", sens.BatteryVoltage);
+        // printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        // MICROMOUSE(driver, &sens);
 
-        //driver->mot->setMotorSpeed((-0.5), -(0.5));
+        // driver->mot->setMotorSpeed((-0.5), -(0.5));
         /*h = imu.accelZ() * 360;
         np.set_hsv({h, 100, 10}, 0, 1);
         np.show();
@@ -243,6 +244,10 @@ extern "C" void app_main(void)
         if (t > 2 * M_PI)
             t = 0.0;
         */
+        //printf("GyroZ:%f\n", driver->imu->gyroZ());
+        //printf("ang_vel:%f\n", driver->imu->gyroZ() * 180.0 / M_PI);
+        rad += driver->imu->gyroZ() / 1000.0;
+        printf("rad:%f\n", rad);
 
         /*h = EncL.readAngle();
         h1 = EncR.readAngle();
@@ -256,7 +261,7 @@ extern "C" void app_main(void)
         //printf("L:%ld    R:%ld\n", h, h1);
         //printf("L:%f    R:%f\n", WheelAngle_L, WheelAngle_R);
         printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);*/
-        //ESP_LOGI("MAIN", "MAIN LOOP");
+        // ESP_LOGI("MAIN", "MAIN LOOP");
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
