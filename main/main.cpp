@@ -62,7 +62,7 @@ void myTaskAdc(void *pvpram)
     wallCharged = xSemaphoreCreateBinary();
     driver->led->set(0b1111);
 
-    uint16_t charge_us = 100000; // コンデンサへの充電時間
+    uint16_t charge_us = 1000; // コンデンサへの充電時間
     uint16_t rise_us = 10; // 放電してからセンサの読み取りを開始するまでの時間
 
     // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();

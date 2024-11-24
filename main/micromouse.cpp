@@ -198,14 +198,14 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
         /*vTaskList(buffer);
         printf("Task execution statistics:\n%s", buffer);*/
 
-        /*if (sens->wall.val.fl + sens->wall.val.l + sens->wall.val.r + sens->wall.val.fr > 100000)
+        if (sens->wall.val.fl + sens->wall.val.l + sens->wall.val.r + sens->wall.val.fr > 100000)
         {
 
             driver->led->set(0b1111);
             sens->gyro.ref = driver->imu->surveybias(2000);
             mode_select(&mode, motion, sens, &val, &control, &map);
             control.flag = FALSE;
-        }*/
+        }
         /*if (time_count > 500)
         {
             driver->led->set(0b1111);
@@ -241,7 +241,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
             time_count = 0;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
-        //printf("mode: %d\n", mode); OK
+        printf("mode: %d\n", mode); //OK
         //printf("time: %d\n", control.time_count); OK
         //printf("vel: %f\n", val.current.vel); OK
         //printf("rad: %f\n", val.current.rad); OK
@@ -258,21 +258,21 @@ void set_interface()
 {
     /* クラスのポインタを配列に保持*/
 
-    ui.push_back(std::make_shared<Search>());
-    ui.push_back(std::make_shared<All_Search>());
-    ui.push_back(std::make_shared<Fast>());
-    ui.push_back(std::make_shared<Fast2>());
-    ui.push_back(std::make_shared<Fast3>());
-    ui.push_back(std::make_shared<Fast4>());
-    ui.push_back(std::make_shared<Test>());
-    ui.push_back(std::make_shared<Test2>());
-    ui.push_back(std::make_shared<Test3>());
-    ui.push_back(std::make_shared<Test4>());
-    ui.push_back(std::make_shared<Test5>());
-    ui.push_back(std::make_shared<Test6>());
-    ui.push_back(std::make_shared<Test7>());
-    ui.push_back(std::make_shared<Log>());
-    ui.push_back(std::make_shared<Log1>());
+    ui.push_back(std::make_shared<Search>()); // 0
+    ui.push_back(std::make_shared<All_Search>()); // 1
+    ui.push_back(std::make_shared<Fast>()); // 2
+    ui.push_back(std::make_shared<Fast2>()); // 3
+    ui.push_back(std::make_shared<Fast3>()); // 4
+    ui.push_back(std::make_shared<Fast4>()); // 5
+    ui.push_back(std::make_shared<Test>()); // 6
+    ui.push_back(std::make_shared<Test2>()); // 7
+    ui.push_back(std::make_shared<Test3>()); // 8
+    ui.push_back(std::make_shared<Test4>()); // 9
+    ui.push_back(std::make_shared<Test5>()); // 10
+    ui.push_back(std::make_shared<Test6>()); // 11
+    ui.push_back(std::make_shared<Test7>()); // 12
+    ui.push_back(std::make_shared<Log>()); // 13
+    ui.push_back(std::make_shared<Log1>()); // 14
 
     //std::cout << "set_interface" << std::endl;
 }
