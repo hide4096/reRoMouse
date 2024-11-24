@@ -198,14 +198,14 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
         /*vTaskList(buffer);
         printf("Task execution statistics:\n%s", buffer);*/
 
-        if (sens->wall.val.fl + sens->wall.val.l + sens->wall.val.r + sens->wall.val.fr > 40000)
+        /*if (sens->wall.val.fl + sens->wall.val.l + sens->wall.val.r + sens->wall.val.fr > 100000)
         {
 
             driver->led->set(0b1111);
             sens->gyro.ref = driver->imu->surveybias(2000);
             mode_select(&mode, motion, sens, &val, &control, &map);
             control.flag = FALSE;
-        }
+        }*/
         /*if (time_count > 500)
         {
             driver->led->set(0b1111);
@@ -241,12 +241,12 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
             time_count = 0;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
-        //printf("mode:%d\n", mode);
-        //printf("time:%d\n", control.time_count);
-        //printf("vel:%f\n", val.current.vel);
-        //printf("rad:%f\n", val.current.rad);
-        //printf("BatteryVoltage:%f\n", sens.BatteryVoltage);
-        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens->wall.val.fl, sens->wall.val.l, sens->wall.val.r, sens->wall.val.fr);
+        //printf("mode: %d\n", mode); OK
+        //printf("time: %d\n", control.time_count); OK
+        //printf("vel: %f\n", val.current.vel); OK
+        //printf("rad: %f\n", val.current.rad); OK
+        //printf("BatteryVoltage: %f\n", sens->BatteryVoltage); OK
+        //printf("sens.wall.val.fl: %d  sens.wall.val.l: %d  sens.wall.val.r: %d  sens.wall.val.fr: %d\n", sens->wall.val.fl, sens->wall.val.l, sens->wall.val.r, sens->wall.val.fr); OK
         //printf("time:%d  mode:%d  flag:%d  Duty_L:%lf  Duty_R:%lf  Batt:%lf\n", time_count, mode, control.flag ,control.Duty_l, control.Duty_r, sens.BatteryVoltage);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);

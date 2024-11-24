@@ -235,7 +235,7 @@ extern "C" void app_main(void)
         //printf("BAT : %f\n", sens.BatteryVoltage);
         //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
         //printf("driver->adc->off:%d\n", driver->adc->_off);
-        //MICROMOUSE(driver, &sens);
+        MICROMOUSE(driver, &sens);
 
         //driver->mot->setMotorSpeed((-0.5), -(0.5));
 
@@ -249,8 +249,8 @@ extern "C" void app_main(void)
 
         //printf("gyroZ : %f\n", driver->imu->gyroZ());
         //printf("ang_vel : %f\n", driver->imu->gyroZ() * (M_PI / 180.0));
-        rad += driver->imu->gyroZ() * (M_PI / 180.0) / 1000.0;
-        printf("rad : %f\n", rad);
+        //rad += driver->imu->gyroZ() * (M_PI / 180.0) / 1000.0;
+        //printf("rad : %f\n", rad);
 
         /*h = driver->encL->readAngle();
         h1 = driver->encR->readAngle();
