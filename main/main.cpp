@@ -62,8 +62,9 @@ void myTaskAdc(void *pvpram)
     wallCharged = xSemaphoreCreateBinary();
     driver->led->set(0b1111);
 
-    uint16_t charge_us = 1000; // コンデンサへの充電時間
-    uint16_t rise_us = 10; // 放電してからセンサの読み取りを開始するまでの時間
+    // センサの設定 (コンデンサ充電時間、放電時間 値のオーバーフロー対策必須（時間設定するか、例外処理追加するか）)　ｒが怪しい
+    uint16_t charge_us = 500; // コンデンサへの充電時間
+    uint16_t rise_us = 30;    // 放電してからセンサの読み取りを開始するまでの時間
 
     // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
 
@@ -72,7 +73,7 @@ void myTaskAdc(void *pvpram)
         sens.BatteryVoltage = driver->adc->BatteryVoltage();
         for (int i = 0; i < 4; i++)
         {
-            if (i > 0)
+            if (i > 0) // i = 0 のときは _on が初期化されていないため、読み取りを行わない
             {
                 driver->adc->_on = driver->adc->readOnTheFly(driver->adc->SENS[i]); // readOnTheFly は 送ったアドレスのひとつ前に送った値を返す
             }
@@ -81,12 +82,30 @@ void myTaskAdc(void *pvpram)
             xSemaphoreTake(wallCharged, portMAX_DELAY);
             gpio_set_level(driver->adc->LED[i], 1);
             esp_rom_delay_us(rise_us);
-            if (i > 0)
-                driver->adc->value[i - 1] = driver->adc->_on - driver->adc->_off;
+            if (i > 0) // i = 0 のときは _on が初期化されていないため、読み取りを行わない
+            {
+                // 何も無いところを見ていると、on,offの値が逆転することがあるため対策
+                if (driver->adc->_on - driver->adc->_off > 0) // on, off の差分が正のとき(on時の値のほうが大きいとき)
+                {
+                    driver->adc->value[i - 1] = driver->adc->_on - driver->adc->_off;
+                }
+                else
+                {
+                    driver->adc->value[i - 1] = driver->adc->_off - driver->adc->_on;
+                }
+            }
             driver->adc->_off = driver->adc->readOnTheFly(driver->adc->SENS[i]);
         }
         driver->adc->_on = driver->adc->readOnTheFly(4);
-        driver->adc->value[3] = driver->adc->_on - driver->adc->_off;
+        if (driver->adc->_on - driver->adc->_off > 0) // on, off の差分が正のとき(on時の値のほうが大きいとき)
+        {
+            driver->adc->value[3] = driver->adc->_on - driver->adc->_off;
+        }
+        else
+        {
+            driver->adc->value[3] = driver->adc->_off - driver->adc->_on;
+        }
+        
 
         // sens_dir の都合上,uintにできないのでintでマイナス値の処理を入れる
 
@@ -135,8 +154,8 @@ void myTaskAdc(void *pvpram)
             sens.wall.val.fl = -fl;
         }*/
 
-        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        //printf("r:%d\n", r);
+        // printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        // printf("r:%d\n", r);
 
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -229,17 +248,17 @@ extern "C" void app_main(void)
     float rad = 0.0;
     while (1)
     {
-        h = driver->imu->accelZ() * 360;
+        //h = driver->imu->accelZ() * 360;
         driver->np->set_hsv({h, 100, 10}, 0, 1);
         driver->np->show();
         //printf("BAT : %f\n", sens.BatteryVoltage);
-        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        //printf("driver->adc->off:%d\n", driver->adc->_off);
+        // printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        // printf("driver->adc->off:%d\n", driver->adc->_off);
         MICROMOUSE(driver, &sens);
 
-        //driver->mot->setMotorSpeed((-0.5), -(0.5));
+        //driver->mot->setMotorSpeed((0.1), (0.1));
 
-        //printf("Z : %ld\n", h);
+        // printf("Z : %ld\n", h);
         /*
         driver->mot->setMotorSpeed(1.0 * sin(t), 1.0 * sin(t));
         t = t + 0.01;
@@ -247,10 +266,10 @@ extern "C" void app_main(void)
             t = 0.0;
         */
 
-        //printf("gyroZ : %f\n", driver->imu->gyroZ());
-        //printf("ang_vel : %f\n", driver->imu->gyroZ() * (M_PI / 180.0));
-        //rad += driver->imu->gyroZ() * (M_PI / 180.0) / 1000.0;
-        //printf("rad : %f\n", rad);
+        // printf("gyroZ : %f\n", driver->imu->gyroZ());
+        // printf("ang_vel : %f\n", driver->imu->gyroZ() * (M_PI / 180.0));
+        // rad += driver->imu->gyroZ() * (M_PI / 180.0) / 1000.0;
+        // printf("rad : %f\n", rad);
 
         /*h = driver->encL->readAngle();
         h1 = driver->encR->readAngle();
@@ -261,10 +280,11 @@ extern "C" void app_main(void)
         float WeeelDegree_L = WheelAngle_L * 180.0 / M_PI;
         float WeeelDegree_R = WheelAngle_R * 180.0 / M_PI;
 
-        //printf("L:%ld    R:%ld\n", h, h1);
+        printf(">L:%ld\n", h);
+        printf(">R:%ld\n", h1);*/
         //printf("L:%f    R:%f\n", WheelAngle_L, WheelAngle_R);
-        printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);*/
-        //ESP_LOGI("MAIN", "MAIN LOOP");
+        //printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);
+        // ESP_LOGI("MAIN", "MAIN LOOP");
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }

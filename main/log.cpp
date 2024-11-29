@@ -25,7 +25,7 @@ void Log::log_print()
     }
 
     uint32_t mem_offset = 0;
-    int16_t data[10];
+    int16_t data[20];
 
     while (1)
     {
@@ -35,7 +35,9 @@ void Log::log_print()
             break;
         }
         printf("%4d,%4d,%4d,%4d,%4d,", data[0], data[1], data[2], data[3], data[4]);
-        printf("%1d,%1d,%1d,%1d,%1d\n", data[5], data[6], data[7], data[8], data[9]);
+        printf("%1d,%1d,%1d,%1d,%1d,", data[5], data[6], data[7], data[8], data[9]);
+        printf("%1d,%1d,%1d,%1d,%1d,", data[10], data[11], data[12], data[13], data[14]);
+        printf("%1d,%1d,%1d,%1d,%1d,%1d\n", data[15], data[16], data[17], data[18], data[19], data[20]);
         mem_offset += sizeof(data);
         if (mem_offset >= partition->size)
         {

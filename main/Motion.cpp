@@ -6,7 +6,7 @@
 #define SECTION_HALF 0.045
 #define TURN_HALF M_PI
 #define TURN_QUARTER M_PI / 2.0
-#define OFFSET_DISTANCE 0.018
+#define OFFSET_DISTANCE 0.014
 #define FRONT_WALL_LIMIT_FL 25100
 #define FRONT_WALL_LIMIT_FR 14600
 #define DONE 1
@@ -45,7 +45,7 @@ void Motion::GetSemphrHandle(SemaphoreHandle_t *_on_logging) { on_logging = _on_
 
 void Motion::run()
 {
-    control->flag = TRUE;       // 制御ON
+    control->flag = TRUE;      // 制御ON
     sens->wall.control = TRUE; // 壁制御OFF
 
     val->I.vel_error = 0.0;
@@ -73,6 +73,11 @@ void Motion::run()
         {
             break;
         }
+        if (val->tar.vel >= val->max.vel)
+        {
+            val->tar.acc = 0;
+            val->tar.vel = val->max.vel;
+        }
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
@@ -92,14 +97,14 @@ void Motion::run()
     // val->tar.vel = val->tar.vel;
     val->tar.acc = 0.0;
 
-    //control->flag = FALSE;
+    // control->flag = FALSE;
 
     // std::cout << "run" << std::endl;
 }
 
 void Motion::run2()
 {
-    control->flag = TRUE;       // 制御ON
+    control->flag = TRUE;      // 制御ON
     sens->wall.control = TRUE; // 壁制御OFF
 
     val->I.vel_error = 0.0;
@@ -121,7 +126,7 @@ void Motion::run2()
     }
 
     bool l_wall_check = sens->wall.exist.l;
-    bool  r_wall_check = sens->wall.exist.r;
+    bool r_wall_check = sens->wall.exist.r;
     bool hosei_flag = FALSE;
 
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel) - (val->end.vel) * (val->end.vel)) / (2.0 *
@@ -141,8 +146,7 @@ void Motion::run2()
             val->current.len = 0.057;
             hosei_flag = TRUE;
         }
-        
-        
+
         if (val->tar.len - 0.01 <= val->current.len)
         {
             break;
@@ -166,15 +170,14 @@ void Motion::run2()
     // val->tar.vel = val->tar.vel;
     val->tar.acc = 0.0;
 
-    //control->flag = FALSE;
+    // control->flag = FALSE;
 
     // std::cout << "run" << std::endl;
 }
 
-
 void Motion::run_half()
 {
-    control->flag = TRUE;       // 制御ON
+    control->flag = TRUE;      // 制御ON
     sens->wall.control = TRUE; // 壁制御OFF
 
     val->I.vel_error = 0.0;
@@ -203,6 +206,11 @@ void Motion::run_half()
         {
             break;
         }
+        if (val->tar.vel >= val->max.vel)
+        {
+            val->tar.acc = 0;
+            val->tar.vel = val->max.vel;
+        }
 
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -222,7 +230,7 @@ void Motion::run_half()
 
     // val->tar.vel = val->tar.vel;
     val->tar.acc = 0.0;
-    //control->flag = FALSE;
+    // control->flag = FALSE;
 
     // std::cout << "run" << std::endl;
 }
@@ -374,12 +382,17 @@ void Motion::stop()
     val->tar.acc = val->max.acc;
     // val->tar.vel = 0.0;
 
-    //bool hosei_flag = NOT_YET;
-    //uint8_t hosei_dist = 0.050;
+    // bool hosei_flag = NOT_YET;
+    // uint8_t hosei_dist = 0.050;
 
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel)) / (2.0 *
                                                                                               val->tar.acc)))
-    {            
+    {
+        if (val->tar.vel >= val->max.vel)
+        {
+            val->tar.acc = 0;
+            val->tar.vel = val->max.vel;
+        }
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
@@ -406,10 +419,10 @@ void Motion::stop()
 
     control->flag = FALSE; // 制御OFF
 
-    //std::cout << "stop" << std::endl;
+    // std::cout << "stop" << std::endl;
 }
 
-void::Motion::stop2()
+void ::Motion::stop2()
 {
     control->flag = TRUE;       // 制御ON
     sens->wall.control = FALSE; // 壁制御OFF
@@ -433,23 +446,23 @@ void::Motion::stop2()
                                                                                               val->tar.acc)))
     {
         if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE)
+        {
+            if (sens->wall.val.fl > FRONT_WALL_LIMIT_FL && sens->wall.val.fr > FRONT_WALL_LIMIT_FR)
             {
-                if (sens->wall.val.fl > FRONT_WALL_LIMIT_FL && sens->wall.val.fr > FRONT_WALL_LIMIT_FR)
-                {
-                    bz->play_melody(pc98, 2);
-                    //control->flag = FALSE;
-                    break;
-                }
-                if (sens->wall.val.fl < FRONT_WALL_LIMIT_FL && sens->wall.val.fr < FRONT_WALL_LIMIT_FR && hosei_flag == NOT_YET)
-                {
-                    //bz->play_melody(pc98, 2);
-                    //while(sens->wall.val.fl < FRONT_WALL_LIMIT_FL && sens->wall.val.fr < FRONT_WALL_LIMIT_FR){vTaskDelay(1/portTICK_PERIOD_MS);}
-                    val->tar.len = hosei_dist;
-                    //bz->play_melody(pc98, 2);
-                    hosei_flag = DONE;
-                }
+                bz->play_melody(pc98, 2);
+                // control->flag = FALSE;
+                break;
             }
-                
+            if (sens->wall.val.fl < FRONT_WALL_LIMIT_FL && sens->wall.val.fr < FRONT_WALL_LIMIT_FR && hosei_flag == NOT_YET)
+            {
+                // bz->play_melody(pc98, 2);
+                // while(sens->wall.val.fl < FRONT_WALL_LIMIT_FL && sens->wall.val.fr < FRONT_WALL_LIMIT_FR){vTaskDelay(1/portTICK_PERIOD_MS);}
+                val->tar.len = hosei_dist;
+                // bz->play_melody(pc98, 2);
+                hosei_flag = DONE;
+            }
+        }
+
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
@@ -467,7 +480,7 @@ void::Motion::stop2()
                 if (sens->wall.val.fl > FRONT_WALL_LIMIT_FL && sens->wall.val.fr > FRONT_WALL_LIMIT_FR)
                 {
                     bz->play_melody(pc98, 2);
-                    //control->flag = FALSE;
+                    // control->flag = FALSE;
                     break;
                 }
                 /*if (sens->wall.val.fl < FRONT_WALL_LIMIT_FL && sens->wall.val.fr < FRONT_WALL_LIMIT_FR && hosei_flag == NOT_YET)
@@ -478,12 +491,7 @@ void::Motion::stop2()
                     bz->play_melody(pc98, 2);
                     hosei_flag = DONE;
                 }*/
-                
-                
             }
-            
-            
-            
         }
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -494,20 +502,20 @@ void::Motion::stop2()
     while (val->current.vel >= 0.0)
     {
         if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE)
+        {
+            if (sens->wall.val.fl > FRONT_WALL_LIMIT_FL && sens->wall.val.fr > FRONT_WALL_LIMIT_FR)
             {
-                if (sens->wall.val.fl > FRONT_WALL_LIMIT_FL && sens->wall.val.fr > FRONT_WALL_LIMIT_FR)
-                {
-                    bz->play_melody(pc98, 2);
-                    //control->flag = FALSE;
-                    break;
-                }
+                bz->play_melody(pc98, 2);
+                // control->flag = FALSE;
+                break;
             }
+        }
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
     control->flag = FALSE; // 制御OFF
 
-    //std::cout << "stop" << std::endl;
+    // std::cout << "stop" << std::endl;
 }
 
 void Motion::back()
@@ -526,12 +534,12 @@ void Motion::back()
     val->tar.ang_vel = 0.0;
     val->tar.ang_acc = 0.0;
 
-    val->tar.len = -OFFSET_DISTANCE-0.004;
+    val->tar.len = -OFFSET_DISTANCE - 0.004;
     val->current.len = 0.0;
     val->tar.acc = -(0.4);
     // val->tar.vel = 0.0;
 
-    //control->test_flag = TRUE;
+    // control->test_flag = TRUE;
 
     uint16_t count = 0;
 
@@ -539,10 +547,10 @@ void Motion::back()
     {
         if (val->current.len < val->tar.len + 0.011)
         {
-            control->flag = FALSE;       // 制御ON
+            control->flag = FALSE; // 制御ON
             control->test_flag = TRUE;
         }
-        
+
         if (val->current.vel >= -0.01 && count > 300)
         {
             break;
@@ -550,29 +558,28 @@ void Motion::back()
         count++;
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
-   //static BUZZER::buzzer_score_t pc98[] = {
-        //{2000, 100}, {1000, 100}};
+    // static BUZZER::buzzer_score_t pc98[] = {
+    //{2000, 100}, {1000, 100}};
 
-   //control->test_flag = TRUE;
+    // control->test_flag = TRUE;
 
-   /*while (val->current.len > val->tar.len)
-   {
-        control->test_Duty_l = -0.25;
-        control->test_Duty_r = -0.28;
-        if (count > 1000) // 300だとダメ（8）
-        {
-            //bz->play_melody(pc98, 2);
-            break;
-        }
-        count++;
-        vTaskDelay(1/portTICK_PERIOD_MS);
-   }*/
+    /*while (val->current.len > val->tar.len)
+    {
+         control->test_Duty_l = -0.25;
+         control->test_Duty_r = -0.28;
+         if (count > 1000) // 300だとダメ（8）
+         {
+             //bz->play_melody(pc98, 2);
+             break;
+         }
+         count++;
+         vTaskDelay(1/portTICK_PERIOD_MS);
+    }*/
 
-   
-    //bz->play_melody(pc98, 2);
-   
-   //control->flag = TRUE;
-   //control->test_flag = FALSE;
+    // bz->play_melody(pc98, 2);
+
+    // control->flag = TRUE;
+    // control->test_flag = FALSE;
 
     val->tar.acc = 0.0;
     val->tar.vel = 0.0;
@@ -593,8 +600,6 @@ void Motion::back()
 
     control->flag = FALSE; // 制御OFF
 
-    
-    
     std::cout << "back" << std::endl;
 }
 
@@ -756,6 +761,7 @@ void Motion::wall_check()
 
     while (1)
     {
+        // 設定したsens->wall.th_wallの値によって光るLEDが変わる
         printf("sens.wall.val.fl:%d    sens.wall.val.l:%d    sens.wall.val.r:%d    sens.wall.val.fr:%d\n", sens->wall.val.fl, sens->wall.val.l, sens->wall.val.r, sens->wall.val.fr);
         led->set(sens->wall.exist.fl + (sens->wall.exist.l << 1) + (sens->wall.exist.r << 2) + (sens->wall.exist.fr << 3));
         vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -944,7 +950,7 @@ void Motion::offset()
 
     control->flag = FALSE; // 制御OFF
 
-    //std::cout << "offset" << std::endl;
+    // std::cout << "offset" << std::endl;
 }
 
 void Motion::calibrate_wall_th()
@@ -1008,7 +1014,7 @@ void Motion::offset2()
     }
 
     // std::cout << "##### deceleration #####" << std::endl;
-    //val->tar.acc = -(val->max.acc);
+    // val->tar.acc = -(val->max.acc);
 
     while ((val->tar.len - 0.001) > val->current.len)
     {
@@ -1020,17 +1026,15 @@ void Motion::offset2()
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
-    //val->tar.acc = 0.0;
-    //val->tar.vel = 0.0;
+    // val->tar.acc = 0.0;
+    // val->tar.vel = 0.0;
 
-    
-
-    //std::cout << "offset" << std::endl;
+    // std::cout << "offset" << std::endl;
 }
 
 void Motion::fast_straight(uint8_t straight_count)
 {
-    control->flag = TRUE;       // 制御ON
+    control->flag = TRUE;      // 制御ON
     sens->wall.control = TRUE; // 壁制御OFF
 
     val->I.vel_error = 0.0;
@@ -1040,7 +1044,7 @@ void Motion::fast_straight(uint8_t straight_count)
     val->tar.ang_acc = 0.0;
     val->tar.ang_vel = 0.0;
 
-    val->tar.len = SECTION*straight_count;
+    val->tar.len = SECTION * straight_count;
     val->current.len = 0.0;
     val->tar.acc = val->max.acc;
     // val->tar.vel = 0.0;
@@ -1074,5 +1078,5 @@ void Motion::fast_straight(uint8_t straight_count)
 
     control->flag = FALSE; // 制御OFF
 
-    //std::cout << "stop" << std::endl;
+    // std::cout << "stop" << std::endl;
 }

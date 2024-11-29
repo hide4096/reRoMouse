@@ -106,9 +106,9 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //val.tar.acc = 0.5;
     val.max.acc = 1.0;
     //val.tar.vel = 0.3;
-    val.max.vel = 0.3;
+    val.max.vel = 0.2;
     val.min.vel = 0.05;
-    val.end.vel = 0.3;
+    val.end.vel = 0.2;
 
     // 角速度
     val.tar.ang_acc = 0.0;
@@ -122,22 +122,22 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //control.v.Kp = pid_gain.speed_Kp;
     //control.v.Ki = pid_gain.speed_Ki;
     //control.v.Kd = pid_gain.speed_Kd;
-    control.v.Kp = 25.0; // 50
-    control.v.Ki = 250.0; // 100
+    control.v.Kp = 20.0; // 20~30 10でもいいかも
+    control.v.Ki = 100.0; // 100
     control.v.Kd = 0.0; 
     // 角速度制御
     //control.o.Kp = pid_gain.ang_vel_Kp;
     //control.o.Ki = pid_gain.ang_vel_Ki;
     //control.o.Kd = pid_gain.ang_vel_Kd;
-    control.o.Kp = 0.35; // 0.1
-    control.o.Ki = 35.0; // 30
+    control.o.Kp = 0.45; // 0.1
+    control.o.Ki = 45.0; // 30
     control.o.Kd = 0.0;
 
     // 壁制御
     //control.wall.Kp = pid_gain.wall_Kp;
     //control.wall.Ki = pid_gain.wall_Ki;
     //control.wall.Kd = pid_gain.wall_Kd;
-    control.wall.Kp = 0.0001;
+    control.wall.Kp = 0.0; //0.0001
     control.wall.Ki = 0.0;
     control.wall.Kd = 0.0;
 
@@ -150,21 +150,21 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //sens.wall.th_control.r = wall_threshold.th_control_r;
     //sens.wall.ref.l = wall_threshold.ref_l;
     //sens.wall.ref.r = wall_threshold.ref_r;
-    sens->wall.th_wall.fl = 1754;
-    sens->wall.th_wall.fr = 893;
-    sens->wall.th_wall.l = 1345;
-    sens->wall.th_wall.r = 1239;
-    sens->wall.th_control.l = 2800; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
-    sens->wall.th_control.r = 3000;
-    sens->wall.ref.l = 3702; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
-    sens->wall.ref.r = 3909;
+    sens->wall.th_wall.fl = 2190;
+    sens->wall.th_wall.fr = 1800;
+    sens->wall.th_wall.l = 4820;
+    sens->wall.th_wall.r = 3000;
+    sens->wall.th_control.l = 10000; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
+    sens->wall.th_control.r = 7000;
+    sens->wall.ref.l = 13600; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
+    sens->wall.ref.r = 8800;
 
     // 3612
     // 3769
 
     // ゴール座標
-    map.GOAL_X = 5;
-    map.GOAL_Y = 5;
+    map.GOAL_X = 3;
+    map.GOAL_Y = 3;
 
     ADS7066 *adc = driver->adc.get();
 
@@ -241,12 +241,14 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
             time_count = 0;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
-        printf("mode: %d\n", mode); //OK
+
+        /* ログ出力したいときは、以下のprintfを全てコメントアウトしておく*/
+        //printf("mode: %d\n", mode); //OK
         //printf("time: %d\n", control.time_count); OK
         //printf("vel: %f\n", val.current.vel); OK
         //printf("rad: %f\n", val.current.rad); OK
-        //printf("BatteryVoltage: %f\n", sens->BatteryVoltage); OK
-        //printf("sens.wall.val.fl: %d  sens.wall.val.l: %d  sens.wall.val.r: %d  sens.wall.val.fr: %d\n", sens->wall.val.fl, sens->wall.val.l, sens->wall.val.r, sens->wall.val.fr); OK
+        //printf("BatteryVoltage: %f\n", sens->BatteryVoltage); //OK
+        //printf("sens.wall.val.fl: %d  sens.wall.val.l: %d  sens.wall.val.r: %d  sens.wall.val.fr: %d\n", sens->wall.val.fl, sens->wall.val.l, sens->wall.val.r, sens->wall.val.fr); //OK
         //printf("time:%d  mode:%d  flag:%d  Duty_L:%lf  Duty_R:%lf  Batt:%lf\n", time_count, mode, control.flag ,control.Duty_l, control.Duty_r, sens.BatteryVoltage);
         time_count++;
         vTaskDelay(10/portTICK_PERIOD_MS);

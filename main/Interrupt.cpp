@@ -1,7 +1,7 @@
 #include "include/Interrupt.hpp"
 
 //#define ENC_MAX 4096
-#define TIRE_DIAMETER 0.0138
+#define TIRE_DIAMETER 0.0145
 #define MMPP TIRE_DIAMETER*M_PI / ENC_MAX
 
 
@@ -316,7 +316,7 @@ void Interrupt::logging()
         vTaskDelete(NULL);
     }
     uint32_t mem_offset = 0;
-    int16_t adcs[10];
+    int16_t adcs[20];
 
     ESP_LOGI("logging", "start logging");
 
@@ -335,6 +335,17 @@ void Interrupt::logging()
             adcs[7] = (int16_t)(val->sum.len * 1000);
             adcs[8] = (int16_t)(val->current.ang_vel * 1000);
             adcs[9] = (int16_t)(val->tar.ang_vel* 1000);
+            adcs[10] = (int16_t)(val->current.rad * 1000);
+            adcs[11] = (int16_t)(val->tar.acc * 1000);
+            adcs[12] = (int16_t)(val->tar.ang_acc * 1000);
+            adcs[13] = (int16_t)(val->current.vel_error * 1000);
+            adcs[14] = (int16_t)(val->I.vel_error * 1000);
+            adcs[15] = (int16_t)(val->p.vel_error * 1000);
+            adcs[16] = (int16_t)(val->current.ang_error * 1000);
+            adcs[17] = (int16_t)(val->I.ang_error * 1000);
+            adcs[18] = (int16_t)(val->p.ang_error * 1000);
+            adcs[19] = (int16_t)(control->Duty_l * 1000);
+            adcs[20] = (int16_t)(control->Duty_r * 1000);
             err = esp_partition_write(partition, mem_offset, adcs, sizeof(adcs));
             if (err != ESP_OK)
             {

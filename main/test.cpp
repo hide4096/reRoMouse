@@ -38,18 +38,18 @@ void Test2::main_task()
 {
     control->log_flag = TRUE;
     val->sum.len = 0.0;
-    motion.offset2();
-    motion.run_half();
-    motion.run(); // 1
+    //motion.offset2(); // 14mm
+    //motion.run_half(); // 45mm
+    motion.run(); // 1 90mm
     motion.run(); // 2
-    //motion.run(); // 3
-    //motion.run(); // 4
-    //motion.run(); // 5
-    //motion.run(); // 6
-    //motion.run(); // 7
-    //motion.run(); // 8
-    //motion.run(); // 9
-    motion.stop();  // OK
+    motion.run(); // 3
+    motion.run(); // 4
+    motion.run(); // 5
+    motion.run(); // 6
+    motion.run(); // 7
+    motion.run(); // 8
+    motion.run(); // 9
+    motion.stop();  // 45mm
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
 }
@@ -127,7 +127,8 @@ void Test6::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test6::main_task()
 {
-    //control->log_flag = TRUE;
+    control->log_flag = TRUE;
+    motion.run(); // 1
     motion.stop();  // OK
     //motion.back();
     control->log_flag = FALSE;
