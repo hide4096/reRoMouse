@@ -148,12 +148,19 @@ typedef struct
 
 typedef struct 
 {
-    float tire_diameter = 0;
-    float tire_radius = 0;
-    //float R;
-    float Kt = 0;
-    float Ke = 0;
+    float tire_diameter = 0.0142;
+    float tire_radius = 0.0071;
+    float Rt = 3.11;
+    float Kt = 0.0007677;
+    float Ke = 0.0000804;
     float truque = 0;
+    float revolutions = 0;
+    float vBatt = 8.4;
+    float m = 0.025;
+    float n = 0.2195121;
+    float cur = 0;
+    float E = 0;
+    float V_mot = 0;
 }t_motor;   //motor parameter
 
 typedef struct 

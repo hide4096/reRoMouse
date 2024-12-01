@@ -136,14 +136,14 @@ void Motion::run2()
         if (sens->wall.exist.l == FALSE && l_wall_check == TRUE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98, 2);
-            val->current.len = 0.059;
+            val->current.len = 0.055;
             hosei_flag = TRUE;
         }
 
         if (sens->wall.exist.r == FALSE && r_wall_check == TRUE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98, 2);
-            val->current.len = 0.057;
+            val->current.len = 0.055;
             hosei_flag = TRUE;
         }
 

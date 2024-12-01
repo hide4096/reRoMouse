@@ -417,14 +417,16 @@ void Adachi::search_adachi2(int gx, int gy)
 			break;
 
 		case RIGHT:
-			stop2();
+			//stop2();
+			stop();
 			turn_right_2();
 			run_half();
 			// printf("turn_right\n");
 			break;
 
 		case LEFT:
-			stop2();
+			//stop2();
+			stop();
 			turn_left_2();
 			run_half();
 			// printf("turn_left\n");

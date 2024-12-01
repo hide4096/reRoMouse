@@ -1,10 +1,8 @@
 #include "include/Interrupt.hpp"
 
-//#define ENC_MAX 4096
-#define TIRE_DIAMETER 0.0145
-#define MMPP TIRE_DIAMETER*M_PI / ENC_MAX
-
-
+// #define ENC_MAX 4096
+#define TIRE_DIAMETER 0.0146
+#define MMPP TIRE_DIAMETER *M_PI / ENC_MAX
 
 Interrupt::Interrupt()
 { /*std::cout << "Interrupt" << std::endl;*/
@@ -26,13 +24,13 @@ void Interrupt::set_device_driver(std::shared_ptr<t_drivers> driver)
     encL = driver->encL;
     mot = driver->mot;
     imu = driver->imu;
-    //np = driver->np;
-    //led = driver->led;
-    //bz = driver->bz;
-    //adc = driver->adc;
-    
-    //std::cout << "set_device_driver" << std::endl;
-    //printf("set_device_driver\n");
+    // np = driver->np;
+    // led = driver->led;
+    // bz = driver->bz;
+    // adc = driver->adc;
+
+    // std::cout << "set_device_driver" << std::endl;
+    // printf("set_device_driver\n");
 }
 
 void Interrupt::GetSemphrHandle(SemaphoreHandle_t *_on_logging) { on_logging = _on_logging; }
@@ -170,6 +168,57 @@ void Interrupt::feedback_control()
 { // フィードバック制御
     if (control->flag == TRUE)
     {
+        control->V_l = 0;
+        control->V_r = 0;
+        control->Duty_l = 0;
+        control->Duty_r = 0;
+        // FF
+        /*if (val->tar.acc >= 0)
+        {
+            control->mot.revolutions = (60 * val->tar.vel) / (2 * control->mot.n * M_PI * control->mot.tire_radius);
+            control->mot.truque = (control->mot.m * control->mot.tire_radius * val->tar.acc) / (2 * control->mot.n);
+            control->mot.E = control->mot.Ke * control->mot.revolutions;
+            control->mot.cur = control->mot.truque / control->mot.Kt;
+            control->mot.V_mot = control->mot.Rt * control->mot.cur + control->mot.E;
+            control->Duty_l = control->mot.V_mot / control->mot.vBatt;
+            control->Duty_r = control->mot.V_mot / control->mot.vBatt;
+
+            printf("val.tar.vel: %lf\n", val->tar.vel);
+            printf("mot.n: %lf\n", control->mot.n);
+            printf("mot.tire_radius: %lf\n", control->mot.tire_radius);
+
+            printf("mot.m: %lf\n", control->mot.m);
+            printf("val.acc: %lf\n", val->tar.acc);
+            printf("mot.Ke: %lf\n", control->mot.Ke);
+            printf("mot.Kt: %lf\n", control->mot.Kt);
+            printf("mot.Rt: %lf\n", control->mot.Rt);
+
+
+
+            printf("mot.rev: %lf\n", control->mot.revolutions);
+            printf("mot.T : %lf\n", control->mot.truque);
+            printf("mot.cur : %lf\n", control->mot.E);
+            printf("mot.V_mot : %lf\n", control->mot.V_mot);
+
+            printf("Duty_l: %lf\n", control->Duty_l);
+            printf("Duty_r: %lf\n", control->Duty_r);
+        }*/
+        if (val->tar.acc > 0)
+        {
+            control->Duty_l = 0.04;
+            control->Duty_r = 0.04;
+        }
+        /*else if (val->tar.acc == 0)
+        {
+            control->Duty_l = 0.04;
+            control->Duty_r = 0.04;
+        }
+        else if (val->tar.acc < 0)
+        {
+            control->Duty_l = 0.01;
+            control->Duty_r = 0.01;
+        }*/
+
         // 速度制御
         val->current.vel_error = val->tar.vel - val->current.vel;
         val->I.vel_error += val->current.vel_error / 1000.0;
@@ -177,6 +226,7 @@ void Interrupt::feedback_control()
 
         control->V_l = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
         control->V_r = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
+        
 
         // 角速度制御
         val->current.ang_error = val->tar.ang_vel - val->current.ang_vel;
@@ -186,8 +236,8 @@ void Interrupt::feedback_control()
         control->V_l -= val->current.ang_error * (control->o.Kp) + val->I.ang_error * (control->o.Ki) - val->p.ang_error * (control->o.Kd);
         control->V_r += val->current.ang_error * (control->o.Kp) + val->I.ang_error * (control->o.Ki) - val->p.ang_error * (control->o.Kd);
 
-        control->Duty_l = control->V_l / sens->BatteryVoltage;  // zero division error に注意
-        control->Duty_r = control->V_r / sens->BatteryVoltage;
+        control->Duty_l += control->V_l / sens->BatteryVoltage; // zero division error に注意
+        control->Duty_r += control->V_r / sens->BatteryVoltage;
 
         mot->setMotorSpeed(control->Duty_r, control->Duty_l);
     }
@@ -197,8 +247,8 @@ void Interrupt::feedback_control()
     }
     if (control->test_flag == TRUE)
     {
-        //mot->setMotorSpeed(control->test_Duty_r,control->test_Duty_l);
-        // 速度制御
+        // mot->setMotorSpeed(control->test_Duty_r,control->test_Duty_l);
+        //  速度制御
         val->current.vel_error = val->tar.vel - val->current.vel;
         val->I.vel_error += val->current.vel_error / 1000.0;
         val->p.vel_error = (val->p.vel - val->current.vel) * 1000.0;
@@ -206,13 +256,13 @@ void Interrupt::feedback_control()
         control->V_l = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
         control->V_r = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
 
-        control->Duty_l = control->V_l / sens->BatteryVoltage;  // zero division error に注意
+        control->Duty_l = control->V_l / sens->BatteryVoltage; // zero division error に注意
         control->Duty_r = control->V_r / sens->BatteryVoltage;
 
         mot->setMotorSpeed(control->Duty_r, control->Duty_l);
-
     }
-    
+    val->p.vel = val->current.vel;
+    val->p.ang_vel = val->current.ang_vel;
 
     // std::cout << "FB_ctl" << std::endl;
     return;
@@ -264,7 +314,7 @@ void Interrupt::calc_distance()
     }
 
     float _vel = (val->l.vel + val->r.vel) / 2.0;
-    
+
     // val->current.vel = _vel;
     val->current.vel = val->current.alpha * (val->current.vel + val->current.acc) + (1.0 - val->current.alpha) * _vel;
     val->current.len += val->current.vel * 0.001;
@@ -273,7 +323,7 @@ void Interrupt::calc_distance()
 
     val->I.vel += val->current.vel; // 積分値更新
 
-    val->p.vel = val->current.vel;
+    
 
     // std::cout << "calc_dist" << std::endl;
     return;
@@ -291,7 +341,7 @@ void Interrupt::calc_angle()
 
     val->current.rad += val->current.ang_vel / 1000.0;
 
-    val->p.ang_vel = val->current.ang_vel;
+    
 
     val->I.ang_vel += val->current.ang_vel; // 角速度積分値更新
 
@@ -322,45 +372,44 @@ void Interrupt::logging()
 
     while (1)
     {
-        //if (control->log_flag == TRUE)
+        // if (control->log_flag == TRUE)
         //{
-            xSemaphoreTake(*on_logging, portMAX_DELAY); // セマフォが取得できるまで無制限に待機 （他タスクによって解放されるまでブロックされる）
-            adcs[0] = sens->wall.val.fl;
-            adcs[1] = sens->wall.val.l;
-            adcs[2] = sens->wall.val.r;
-            adcs[3] = sens->wall.val.fr;
-            adcs[4] = (uint16_t)(sens->BatteryVoltage * 1000);
-            adcs[5] = (int16_t)(val->current.vel * 1000);
-            adcs[6] = (int16_t)(val->tar.vel * 1000);
-            adcs[7] = (int16_t)(val->sum.len * 1000);
-            adcs[8] = (int16_t)(val->current.ang_vel * 1000);
-            adcs[9] = (int16_t)(val->tar.ang_vel* 1000);
-            adcs[10] = (int16_t)(val->current.rad * 1000);
-            adcs[11] = (int16_t)(val->tar.acc * 1000);
-            adcs[12] = (int16_t)(val->tar.ang_acc * 1000);
-            adcs[13] = (int16_t)(val->current.vel_error * 1000);
-            adcs[14] = (int16_t)(val->I.vel_error * 1000);
-            adcs[15] = (int16_t)(val->p.vel_error * 1000);
-            adcs[16] = (int16_t)(val->current.ang_error * 1000);
-            adcs[17] = (int16_t)(val->I.ang_error * 1000);
-            adcs[18] = (int16_t)(val->p.ang_error * 1000);
-            adcs[19] = (int16_t)(control->Duty_l * 1000);
-            adcs[20] = (int16_t)(control->Duty_r * 1000);
-            err = esp_partition_write(partition, mem_offset, adcs, sizeof(adcs));
-            if (err != ESP_OK)
-            {
-                ESP_LOGE("logging", "write error");
-                printf("%s\n", esp_err_to_name(err));
+        xSemaphoreTake(*on_logging, portMAX_DELAY); // セマフォが取得できるまで無制限に待機 （他タスクによって解放されるまでブロックされる）
+        adcs[0] = sens->wall.val.fl;
+        adcs[1] = sens->wall.val.l;
+        adcs[2] = sens->wall.val.r;
+        adcs[3] = sens->wall.val.fr;
+        adcs[4] = (uint16_t)(sens->BatteryVoltage * 1000);
+        adcs[5] = (int16_t)(val->current.vel * 1000);
+        adcs[6] = (int16_t)(val->tar.vel * 1000);
+        adcs[7] = (int16_t)(val->sum.len * 1000);
+        adcs[8] = (int16_t)(val->current.ang_vel * 1000);
+        adcs[9] = (int16_t)(val->tar.ang_vel * 1000);
+        adcs[10] = (int16_t)(val->current.rad * 1000);
+        adcs[11] = (int16_t)(val->tar.acc * 1000);
+        adcs[12] = (int16_t)(val->tar.ang_acc * 1000);
+        adcs[13] = (int16_t)(val->current.vel_error * 1000);
+        adcs[14] = (int16_t)(val->I.vel_error * 1000);
+        adcs[15] = (int16_t)(val->p.vel_error * 1000);
+        adcs[16] = (int16_t)(val->current.ang_error * 1000);
+        adcs[17] = (int16_t)(val->I.ang_error * 1000);
+        adcs[18] = (int16_t)(val->p.ang_error * 1000);
+        adcs[19] = (int16_t)(control->Duty_l * 1000);
+        adcs[20] = (int16_t)(control->Duty_r * 1000);
+        err = esp_partition_write(partition, mem_offset, adcs, sizeof(adcs));
+        if (err != ESP_OK)
+        {
+            ESP_LOGE("logging", "write error");
+            printf("%s\n", esp_err_to_name(err));
 
-                break;
-            }
-            mem_offset += sizeof(adcs);
-            if (mem_offset >= partition->size)
-                break;
+            break;
+        }
+        mem_offset += sizeof(adcs);
+        if (mem_offset >= partition->size)
+            break;
 
-            
         //}
-        //vTaskDelay(1 / portTICK_PERIOD_MS);
+        // vTaskDelay(1 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
     // std::cout << "logging" << std::endl;
@@ -377,7 +426,7 @@ void Interrupt::reset_I_gain()
 
 float Interrupt::calc_target_accel()
 {
-    return ((val->end.vel)* (val->end.vel) - (val->current.vel) * (val->current.vel)) / (2.0 * val->tar.len);
+    return ((val->end.vel) * (val->end.vel) - (val->current.vel) * (val->current.vel)) / (2.0 * val->tar.len);
 }
 
 void Interrupt::interrupt()
@@ -401,8 +450,7 @@ void Interrupt::interrupt()
         {
             map->search_time++;
         }
-        
-        
+
         control->time_count++;
 
         // printf("Duty_l : %f\n", control->Duty_l);

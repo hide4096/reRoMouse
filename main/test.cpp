@@ -1,7 +1,5 @@
 #include "include/UI/test.hpp"
 
-
-
 void Test::ptr_by_sensor(t_sens_data *_sens) { sens = _sens; }
 
 void Test::ptr_by_motion(t_mouse_motion_val *_val) { val = _val; }
@@ -15,8 +13,8 @@ void Test::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 void Test::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test::main_task()
-{   
-    //control->log_flag = TRUE;
+{
+    // control->log_flag = TRUE;
     motion.check_enkaigei(); // ok
     control->log_flag = FALSE;
     std::cout << "Test" << std::endl;
@@ -38,18 +36,18 @@ void Test2::main_task()
 {
     control->log_flag = TRUE;
     val->sum.len = 0.0;
-    //motion.offset2(); // 14mm
-    //motion.run_half(); // 45mm
-    motion.run(); // 1 90mm
-    motion.run(); // 2
-    motion.run(); // 3
-    motion.run(); // 4
-    motion.run(); // 5
-    motion.run(); // 6
-    motion.run(); // 7
-    motion.run(); // 8
-    motion.run(); // 9
-    motion.stop();  // 45mm
+    // motion.offset2(); // 14mm
+    // motion.run_half(); // 45mm
+    motion.run();  // 1 90mm
+    motion.run();  // 2
+    motion.run();  // 3
+    motion.run();  // 4
+    motion.run();  // 5
+    motion.run();  // 6
+    motion.run();  // 7
+    motion.run();  // 8
+    motion.run();  // 9
+    motion.stop(); // 45mm
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
 }
@@ -68,8 +66,15 @@ void Test3::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test3::main_task()
 {
-    //control->log_flag = TRUE;
+    control->log_flag = TRUE;
     motion.turn_left_2(); // ok
+    motion.turn_left_2();
+    motion.turn_left_2();
+    motion.turn_left_2();
+    motion.turn_left_2();
+    motion.turn_left_2();
+    motion.turn_left_2();
+    motion.turn_left_2();
     control->log_flag = FALSE;
     std::cout << "Test3" << std::endl;
 }
@@ -88,8 +93,15 @@ void Test4::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test4::main_task()
 {
-    //control->log_flag = TRUE;
+    control->log_flag = TRUE;
     motion.turn_right_2(); // ok
+    motion.turn_right_2();
+    motion.turn_right_2();
+    motion.turn_right_2();
+    motion.turn_right_2();
+    motion.turn_right_2();
+    motion.turn_right_2();
+    motion.turn_right_2();
     control->log_flag = FALSE;
     std::cout << "Test4" << std::endl;
 }
@@ -107,8 +119,8 @@ void Test5::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 void Test5::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test5::main_task()
-{   
-    motion.set_pid_gain(); // ok
+{
+    motion.set_pid_gain();       // ok
     motion.set_wall_threshold(); // ok
     std::cout << "Test" << std::endl;
 }
@@ -128,9 +140,11 @@ void Test6::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 void Test6::main_task()
 {
     control->log_flag = TRUE;
-    motion.run(); // 1
-    motion.stop();  // OK
-    //motion.back();
+    motion.run();  // 1
+    motion.run();  // 2
+    motion.run();  // 3
+    motion.stop(); // OK
+    // motion.back();
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
 }
@@ -149,9 +163,8 @@ void Test7::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test7::main_task()
 {
-    //control->log_flag = TRUE;
+    // control->log_flag = TRUE;
     motion.wall_check(); // OK
     control->log_flag = FALSE;
     std::cout << "Test3" << std::endl;
 }
-

@@ -112,32 +112,32 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
 
     // 角速度
     val.tar.ang_acc = 0.0;
-    val.max.ang_acc = M_PI*8.0;
+    val.max.ang_acc = M_PI*12.0;
     val.tar.ang_vel = 0.0;
     val.max.ang_vel = M_PI*2.0;
-    val.min.ang_vel = M_PI/5.0;
+    val.min.ang_vel = M_PI/4.0;
     val.end.ang_vel = 0.0;
 
     // 速度制御
     //control.v.Kp = pid_gain.speed_Kp;
     //control.v.Ki = pid_gain.speed_Ki;
     //control.v.Kd = pid_gain.speed_Kd;
-    control.v.Kp = 20.0; // 20~30 10でもいいかも
-    control.v.Ki = 100.0; // 100
-    control.v.Kd = 0.0; 
+    control.v.Kp = 10.0; // 20~30 10でもいいかも
+    control.v.Ki = 60.0; // 100
+    control.v.Kd = 0.02; 
     // 角速度制御
     //control.o.Kp = pid_gain.ang_vel_Kp;
     //control.o.Ki = pid_gain.ang_vel_Ki;
     //control.o.Kd = pid_gain.ang_vel_Kd;
-    control.o.Kp = 0.45; // 0.1
-    control.o.Ki = 45.0; // 30
+    control.o.Kp = 0.1; // 0.1
+    control.o.Ki = 30.0; // 30
     control.o.Kd = 0.0;
 
     // 壁制御
     //control.wall.Kp = pid_gain.wall_Kp;
     //control.wall.Ki = pid_gain.wall_Ki;
     //control.wall.Kd = pid_gain.wall_Kd;
-    control.wall.Kp = 0.0; //0.0001
+    control.wall.Kp = 0.00004; //0.0001
     control.wall.Ki = 0.0;
     control.wall.Kd = 0.0;
 
@@ -154,17 +154,17 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     sens->wall.th_wall.fr = 1800;
     sens->wall.th_wall.l = 4820;
     sens->wall.th_wall.r = 3000;
-    sens->wall.th_control.l = 10000; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
-    sens->wall.th_control.r = 7000;
-    sens->wall.ref.l = 13600; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
-    sens->wall.ref.r = 8800;
+    sens->wall.th_control.l = 11700; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
+    sens->wall.th_control.r = 7900;
+    sens->wall.ref.l = 12600; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
+    sens->wall.ref.r = 8000;
 
     // 3612
     // 3769
 
     // ゴール座標
-    map.GOAL_X = 3;
-    map.GOAL_Y = 3;
+    map.GOAL_X = 7;
+    map.GOAL_Y = 7;
 
     ADS7066 *adc = driver->adc.get();
 
