@@ -16,6 +16,16 @@
 #include "drivers.hpp"
 #include "micromouse.hpp"
 
+#include "freertos/event_groups.h"
+#include "esp_system.h"
+#include "esp_bt.h"
+#include "esp_gap_ble_api.h"
+#include "esp_gatts_api.h"
+#include "esp_bt_main.h"
+#include "esp_gatt_common_api.h"
+#include "gatts_table_create.hpp"
+
+
 #define INIT_STATE_FL (0)
 #define INIT_STATE_L (0)
 #define INIT_STATE_R (0)
