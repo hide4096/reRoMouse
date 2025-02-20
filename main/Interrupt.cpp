@@ -315,7 +315,7 @@ void Interrupt::calc_distance()
 
     float _vel = (val->l.vel + val->r.vel) / 2.0;
 
-    // val->current.vel = _vel;
+    //val->current.vel = _vel;
     val->current.vel = val->current.alpha * (val->current.vel + val->current.acc) + (1.0 - val->current.alpha) * _vel;
     val->current.len += val->current.vel * 0.001;
     // std::cout << "val->current.vel : " << val->current.vel << std::endl;

@@ -1192,8 +1192,8 @@ extern "C" void app_main(void)
         // h = driver->imu->accelZ() * 360;
         driver->np->set_hsv({h, 100, 10}, 0, 1);
         driver->np->show();
-        // printf("BAT : %f\n", sens.BatteryVoltage);
-        //  printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        //printf("BAT : %f\n", sens.BatteryVoltage);
+        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
         //  printf("driver->adc->off:%d\n", driver->adc->_off);
         MICROMOUSE(driver, &sens);
 
@@ -1207,12 +1207,13 @@ extern "C" void app_main(void)
             t = 0.0;
         */
 
-        // printf("gyroZ : %f\n", driver->imu->gyroZ());
+        //printf("gyroZ : %f\n", driver->imu->gyroZ());
         // printf("ang_vel : %f\n", driver->imu->gyroZ() * (M_PI / 180.0));
-        // rad += driver->imu->gyroZ() * (M_PI / 180.0) / 1000.0;
-        // printf("rad : %f\n", rad);
+        //rad += driver->imu->gyroZ() * (M_PI / 180.0) / 1000.0 *100;// 1tick が100ms周期になっているため *100
+        //printf("rad : %f\n", rad);
 
-        /*h = driver->encL->readAngle();
+        /*
+        h = driver->encL->readAngle();
         h1 = driver->encR->readAngle();
 
         float WheelAngle_L = 2.0 * M_PI * h / 16384.0;
@@ -1222,9 +1223,10 @@ extern "C" void app_main(void)
         float WeeelDegree_R = WheelAngle_R * 180.0 / M_PI;
 
         printf(">L:%ld\n", h);
-        printf(">R:%ld\n", h1);*/
-        // printf("L:%f    R:%f\n", WheelAngle_L, WheelAngle_R);
+        //printf(">R:%ld\n", h1);
+        //printf("L:%f    R:%f\n", WheelAngle_L, WheelAngle_R);
         // printf("L:%f    R:%f\n", WeeelDegree_L, WeeelDegree_R);
+        */
         //  ESP_LOGI("MAIN", "MAIN LOOP");
         vTaskDelay(pdMS_TO_TICKS(100));
     }

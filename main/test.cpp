@@ -12,7 +12,7 @@ void Test::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Test::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Test::main_task()
+void Test::main_task() // Task Number 6
 {
     // control->log_flag = TRUE;
     motion.check_enkaigei(); // ok
@@ -32,7 +32,7 @@ void Test2::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Test2::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Test2::main_task()
+void Test2::main_task() // Task Number 7
 {
     control->log_flag = TRUE;
     val->sum.len = 0.0;
@@ -64,7 +64,7 @@ void Test3::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Test3::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Test3::main_task()
+void Test3::main_task() // Task Number 8
 {
     control->log_flag = TRUE;
     motion.turn_left_2(); // ok
@@ -91,7 +91,7 @@ void Test4::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Test4::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Test4::main_task()
+void Test4::main_task() // Task Number 9
 {
     control->log_flag = TRUE;
     motion.turn_right_2(); // ok
@@ -118,7 +118,7 @@ void Test5::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Test5::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Test5::main_task()
+void Test5::main_task() // Task Number 10
 {
     motion.set_pid_gain();       // ok
     motion.set_wall_threshold(); // ok
@@ -137,7 +137,7 @@ void Test6::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Test6::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Test6::main_task()
+void Test6::main_task() // Task Number 11
 {
     control->log_flag = TRUE;
     motion.run();  // 1
@@ -161,7 +161,7 @@ void Test7::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Test7::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Test7::main_task()
+void Test7::main_task() // Task Number 12
 {
     // control->log_flag = TRUE;
     motion.wall_check(); // OK
