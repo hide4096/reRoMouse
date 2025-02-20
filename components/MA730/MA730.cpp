@@ -16,6 +16,9 @@ MA730::MA730(spi_host_device_t bus, gpio_num_t cs, uint8_t ccw)
     {
         WriteRegister(ADRS_Rotation_direction, ccw << 7);
     }
+
+    SetFilter(FCUTOFF_HZ_6000);
+
     ESP_LOGI("MA730", "CS:%d Initialized", cs);
 }
 
@@ -63,6 +66,14 @@ uint8_t MA730::WriteRegister(uint8_t address, uint8_t data)
     OperateRegisters(WRITE_COMMAND, address, data);
     vTaskDelay(pdMS_TO_TICKS(20));
     return read() >> 8;
+}
+
+// フィルタ時定数の設定 (FW レジスタ 0xE に書き込む)
+void MA730::SetFilter(uint8_t fw_value)
+{
+    WriteRegister(0xE, fw_value);
+    vTaskDelay(pdMS_TO_TICKS(12)); // 安定化のための待機
+    ESP_LOGI("MA730", "Filter set to FW: %d", fw_value);
 }
 
 void MA730::Shar_SensData(t_sens_data *_sens)

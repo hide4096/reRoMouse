@@ -15,6 +15,9 @@
 #define ADRS_Rotation_direction 0b01001 // 回転方向逆転のアドレス ここの7bit目を1にすると回転方向が逆になる
 #define RESOLUTION_MAX 16384
 #define RESORUTION_HALF 8192
+#define FCUTOFF_HZ_6000 51
+#define FCUTOFF_HZ_3000 68
+#define FCUTOFF_HZ_370 119 
 
 
 
@@ -33,6 +36,7 @@ private:
     uint16_t OperateRegisters(const uint8_t command, const uint8_t address, const uint8_t data);
     uint8_t ReadRegister(const uint8_t address, const uint8_t data);
     uint8_t WriteRegister(const uint8_t address, const uint8_t data);
+    void SetFilter(const uint8_t fw_value);
     esp_err_t ret;
     esp_err_t err;
     spi_transaction_t cmd;
