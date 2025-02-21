@@ -12,7 +12,7 @@ void Search::set_device_driver(std::shared_ptr<t_drivers> driver){}
 
 void Search::ref_by_motion(Adachi &_adachi) { motion = _adachi;}
 
-void Search::main_task()
+void Search::main_task() // Task Number 0
 {
     val->current.rad = 0.0;
     map->pos.x = 0;
@@ -44,8 +44,12 @@ void All_Search::set_device_driver(std::shared_ptr<t_drivers> driver){}
 
 void All_Search::ref_by_motion(Adachi &_adachi) { motion = _adachi;}
 
-void All_Search::main_task()
+void All_Search::main_task() // Task Number 1
 {
+    //val->max.acc = 1.5;
+    //val->max.vel = 0.4;
+    //val->end.vel = 0.4;
+
     val->current.rad = 0.0;
     map->pos.x = 0;
     map->pos.y = 0;

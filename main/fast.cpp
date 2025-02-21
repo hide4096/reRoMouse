@@ -13,7 +13,7 @@ void Fast::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast::ref_by_motion(Adachi &_adachi) { motion = _adachi; } // ここでのポインタ渡しを忘れていて、InitMazeが正しく行えず、map_readがオーバーフローした
 
-void Fast::main_task()
+void Fast::main_task() // Task Number 2
 {
     //motion.InitMaze();
     //*map = map_read();
@@ -49,7 +49,7 @@ void Fast2::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast2::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Fast2::main_task()
+void Fast2::main_task() // Task Number 3
 {
     //motion.InitMaze();
     //*map = map_read();
@@ -92,7 +92,7 @@ void Fast3::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast3::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Fast3::main_task()
+void Fast3::main_task() // Task Number 4
 {
     val->current.rad = 0.0;
     map->pos.x = 0;
@@ -132,7 +132,7 @@ void Fast4::set_device_driver(std::shared_ptr<t_drivers> driver) {}
 
 void Fast4::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
-void Fast4::main_task()
+void Fast4::main_task() // Task Number 5
 {
     val->current.rad = 0.0;
     map->pos.x = 0;
