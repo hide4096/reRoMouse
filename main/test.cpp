@@ -47,6 +47,11 @@ void Test2::main_task() // Task Number 7
     motion.run();  // 7
     motion.run();  // 8
     motion.run();  // 9
+    motion.run();  // 10
+    motion.run();  // 11
+    motion.run();  // 12
+    motion.run();  // 13
+    motion.run();  // 14
     motion.stop(); // 45mm
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
@@ -140,9 +145,20 @@ void Test6::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 void Test6::main_task() // Task Number 11
 {
     control->log_flag = TRUE;
-    motion.run();  // 1
-    motion.run();  // 2
-    motion.run();  // 3
+    motion.run2();  // 1
+    motion.run2();  // 2
+    motion.run2();  // 3
+    motion.run2();  // 4
+    motion.run2();  // 5
+    motion.run2();  // 6
+    motion.run2();  // 7
+    motion.run2();  // 8
+    motion.run2();  // 9
+    motion.run2();  // 10
+    motion.run2();  // 11
+    motion.run2();  // 12
+    motion.run2();  // 13
+    motion.run2();  // 14
     motion.stop(); // OK
     // motion.back();
     control->log_flag = FALSE;
