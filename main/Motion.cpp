@@ -60,11 +60,11 @@ void Motion::run()
     val->tar.len = SECTION;
     // val->tar.vel = 0.0;
 
-    if (len_count == 7)
+    /*if (len_count == 7)
     {
         // val->tar.len = 45;
         val->tar.len = 0.045;
-    }
+    }*/
 
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel) - (val->end.vel) * (val->end.vel)) / (2.0 *
                                                                                                                                 val->tar.acc)))
@@ -119,11 +119,11 @@ void Motion::run2()
     val->tar.len = SECTION;
     // val->tar.vel = 0.0;
 
-    if (len_count == 7)
+    /*if (len_count == 7)
     {
         // val->tar.len = 45;
         val->tar.len = 0.045;
-    }
+    }*/
 
     bool l_wall_check = sens->wall.exist.l;
     bool r_wall_check = sens->wall.exist.r;
@@ -192,11 +192,11 @@ void Motion::run_half()
     val->tar.acc = val->max.acc;
     // val->tar.vel = 0.0;
 
-    if (len_count == 7)
+    /*if (len_count == 7)
     {
         // val->tar.len = 45;
         val->tar.len = 0.045;
-    }
+    }*/
 
     // 制御式に欠陥を見つけた。加速度が一定以下だと、while文を抜け出せず、走行距離が延びてしまう。
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel) - (val->end.vel) * (val->end.vel)) / (2.0 *
