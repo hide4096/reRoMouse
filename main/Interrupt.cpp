@@ -366,7 +366,7 @@ void Interrupt::logging()
         vTaskDelete(NULL);
     }
     uint32_t mem_offset = 0;
-    int16_t adcs[20];
+    int16_t adcs[22];
 
     ESP_LOGI("logging", "start logging");
 
@@ -396,6 +396,8 @@ void Interrupt::logging()
         adcs[18] = (int16_t)(val->p.ang_error * 1000);
         adcs[19] = (int16_t)(control->Duty_l * 1000);
         adcs[20] = (int16_t)(control->Duty_r * 1000);
+        adcs[21] = (int16_t)(sens->enc.data.l * 1000);
+        adcs[22] = (int16_t)(sen * 1000);
         err = esp_partition_write(partition, mem_offset, adcs, sizeof(adcs));
         if (err != ESP_OK)
         {
