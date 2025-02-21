@@ -14,8 +14,9 @@ void Test::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test::main_task() // Task Number 6
 {
-    // control->log_flag = TRUE;
-    motion.check_enkaigei(); // ok
+    control->log_flag = TRUE;
+    //motion.check_enkaigei(); // ok
+    motion.CheckMotorDuty(0.1, 0.1, 5000); // ok
     control->log_flag = FALSE;
     std::cout << "Test" << std::endl;
 }

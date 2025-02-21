@@ -1080,3 +1080,23 @@ void Motion::fast_straight(uint8_t straight_count)
 
     // std::cout << "stop" << std::endl;
 }
+
+void Motion::CheckMotorDuty(float Duty_l, float Duty_r, uint32_t time)
+{
+    //control->flag = TRUE; // 制御ON
+
+    control->Duty_l = Duty_l;
+    control->Duty_r = Duty_r;
+
+    uint32_t count = 0;
+
+    while (count < time)
+    {
+        mot->setMotorSpeed(Duty_l, Duty_r);
+        printf("Duty_L:%f    Duty_R:%f\n", control->Duty_l, control->Duty_r);
+        count++;
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    control->flag = FALSE; // 制御OFF
+}
