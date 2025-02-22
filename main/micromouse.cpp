@@ -104,11 +104,11 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
 
     // 速度
     //val.tar.acc = 0.5;
-    val.max.acc = 2.0;
+    val.max.acc = 3.0;
     //val.tar.vel = 0.3;
-    val.max.vel = 0.4;
+    val.max.vel = 0.3;
     val.min.vel = 0.1;
-    val.end.vel = 0.4;
+    val.end.vel = 0.3;
 
     // 角速度
     val.tar.ang_acc = 0.0;
@@ -163,8 +163,8 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     // 3769
 
     // ゴール座標
-    map.GOAL_X = 8;
-    map.GOAL_Y = 7;
+    map.GOAL_X = 0;
+    map.GOAL_Y = 14;
 
     ADS7066 *adc = driver->adc.get();
 
@@ -177,6 +177,9 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
                             //"adc", 8192, &adc, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM);
     xTaskCreatePinnedToCore(myTaskLog,
                             "log", 8192, &interrupt, configMAX_PRIORITIES - 3, NULL, APP_CPU_NUM);
+
+    //xTaskCreatePinnedToCore(myTaskNeoPixel,
+                            //"nepixel", 8192, &driver, configMAX_PRIORITIES - 24, NULL, APP_CPU_NUM); // driver ごと渡すにはサイズが大きすぎるかも
     //printf("finish task\n");
 
     /*char buffer[512];
