@@ -25,10 +25,6 @@
 #include "esp_gatt_common_api.h"
 #include "gatts_table_create.hpp"
 
-#define INIT_STATE_FL (0)
-#define INIT_STATE_L (0)
-#define INIT_STATE_R (0)
-#define INIT_STATE_FR (0)
 
 // BLE GATT Server の設定 /////////////////////////////////////////////////
 t_sens_data sens;
@@ -1184,17 +1180,19 @@ extern "C" void app_main(void)
 
     /////////////////////////////////////////////////
 
-    uint32_t h = 0, h1 = 0;
-    float t = 0.0;
-    float rad = 0.0;
+    //uint32_t h = 0, h1 = 0;
+    //float t = 0.0;
+    //float rad = 0.0;
     while (1)
     {
         // h = driver->imu->accelZ() * 360;
-        driver->np->set_hsv({h, 100, 10}, 0, 1);
+        //driver->np->set_hsv({h, 100, 10}, 0, 1);
+        driver->np->set_hsv({240, 100, 100}, 0, 1);
         driver->np->show();
-        //printf("BAT : %f\n", sens.BatteryVoltage);
-        //printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        //  printf("driver->adc->off:%d\n", driver->adc->_off);
+        //driver->np->gaming_mouse();
+        // printf("BAT : %f\n", sens.BatteryVoltage);
+        // printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
+        //   printf("driver->adc->off:%d\n", driver->adc->_off);
         MICROMOUSE(driver, &sens);
 
         // driver->mot->setMotorSpeed((0.1), (0.1));
