@@ -15,6 +15,7 @@ void Search::ref_by_motion(Adachi &_adachi) { motion = _adachi;}
 void Search::main_task() // Task Number 0
 {
     val->current.rad = 0.0;
+    val->sum.len = 0.0;
     map->pos.x = 0;
     map->pos.y = 0;
     map->pos.dir = NORTH;
@@ -51,6 +52,7 @@ void All_Search::main_task() // Task Number 1
     //val->end.vel = 0.4;
 
     val->current.rad = 0.0;
+    val->sum.len = 0.0;
     map->pos.x = 0;
     map->pos.y = 0;
     map->pos.dir = NORTH;
