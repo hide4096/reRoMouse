@@ -48,6 +48,10 @@ class Interrupt : public Micromouse{
         float target_acc = 0.0;
         float sum_len = 0.0;
 
+        int64_t start_time = 0;
+        int64_t end_time = 0;
+        int64_t delta_time = 0;
+
         std::shared_ptr<NeoPixel> np;
         std::shared_ptr<MPU6500> imu;
         std::shared_ptr<PCA9632> led;

@@ -45,6 +45,9 @@ void Motion::GetSemphrHandle(SemaphoreHandle_t *_on_logging) { on_logging = _on_
 
 void Motion::run()
 {
+    control->delta_run_time = 0;
+    control->start_run_time = esp_timer_get_time();
+
     control->flag = TRUE;      // 制御ON
     sens->wall.control = TRUE; // 壁制御OFF
 
@@ -65,6 +68,9 @@ void Motion::run()
         // val->tar.len = 45;
         val->tar.len = 0.045;
     }*/
+    //np->set_hsv({240, 100, 100}, 0, 1);
+    //np->show();
+    led->set(0b0000);
 
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel) - (val->end.vel) * (val->end.vel)) / (2.0 *
                                                                                                                                 val->tar.acc)))
@@ -96,8 +102,14 @@ void Motion::run()
 
     // val->tar.vel = val->tar.vel;
     val->tar.acc = 0.0;
+    //np->set_hsv({0, 100, 100}, 0, 1);
+    //np->show();
 
     // control->flag = FALSE;
+    led->set(0b1111);
+
+    control->end_run_time = esp_timer_get_time();
+    control->delta_run_time = control->end_run_time - control->start_run_time;
 
     // std::cout << "run" << std::endl;
 }
@@ -385,6 +397,9 @@ void Motion::stop()
     // bool hosei_flag = NOT_YET;
     // uint8_t hosei_dist = 0.050;
 
+    np->set_hsv({240, 100, 100}, 0, 1);
+    np->show();
+
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel)) / (2.0 *
                                                                                               val->tar.acc)))
     {
@@ -418,6 +433,11 @@ void Motion::stop()
     }
 
     control->flag = FALSE; // 制御OFF
+
+    val->current.len = 0.0;
+
+    np->set_hsv({240, 100, 100}, 0, 1);
+    np->show();
 
     // std::cout << "stop" << std::endl;
 }
@@ -1016,7 +1036,7 @@ void Motion::offset2()
     // std::cout << "##### deceleration #####" << std::endl;
     // val->tar.acc = -(val->max.acc);
 
-    while ((val->tar.len - 0.001) > val->current.len)
+    while ((val->tar.len - 0.001) > val->current.len) // offsetにこのwhile文の処理いらないかも
     {
         if (val->tar.vel <= val->min.vel)
         {

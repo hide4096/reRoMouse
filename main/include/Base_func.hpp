@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include "esp_timer.h"
 #include "structs.hpp"
 #include "drivers.hpp"
 

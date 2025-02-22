@@ -25,7 +25,9 @@ void Log::log_print()
     }
 
     uint32_t mem_offset = 0;
-    int16_t data[20];
+    int16_t data[34];
+    int64_t run_time = 0;
+    int64_t search_time = 0;
 
     while (1)
     {
@@ -34,10 +36,17 @@ void Log::log_print()
         {
             break;
         }
+        
+        run_time = ((int64_t)data[29] << 48) | ((int64_t)data[28] << 32) | ((int64_t)data[27] << 16) | (int64_t)data[26];
+        search_time = ((int64_t)data[33] << 48) | ((int64_t)data[32] << 32) | ((int64_t)data[31] << 16) | (int64_t)data[30];
+
         printf("%4d,%4d,%4d,%4d,%4d,", data[0], data[1], data[2], data[3], data[4]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[5], data[6], data[7], data[8], data[9]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[10], data[11], data[12], data[13], data[14]);
-        printf("%1d,%1d,%1d,%1d,%1d,%1d\n", data[15], data[16], data[17], data[18], data[19], data[20]);
+        printf("%1d,%1d,%1d,%1d,%1d,", data[15], data[16], data[17], data[18], data[19]);
+        printf("%1d,%1d,%1d,%1d,%1d,", data[20], data[21], data[22], data[23], data[24]);
+        printf("%1d,%1lld,%1lld\n", data[25], run_time, search_time);
+
         mem_offset += sizeof(data);
         if (mem_offset >= partition->size)
         {
@@ -48,7 +57,7 @@ void Log::log_print()
     //  std::cout << "Log" << std::endl;
 }
 
-void Log::main_task()
+void Log::main_task() // Task Number 13
 {
     log_print();
     // std::cout << "Log" << std::endl;
@@ -96,7 +105,7 @@ void Log1::log_print()
     std::cout << "Log" << std::endl;
 }
 
-void Log1::map_print()
+void Log1::map_print() // Task Number 14
 {
     *map = map_read();
     signed char i, j;

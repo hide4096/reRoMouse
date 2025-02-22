@@ -189,12 +189,18 @@ typedef struct
     float Duty_r = 0;
     float test_Duty_l = 0;
     float test_Duty_r = 0;
-    int time_count = 0;
+    uint64_t time_count = 0;
     t_bool flag = FALSE;
     t_bool test_flag = FALSE;
     t_motor mot;
     t_odom odom;
     t_bool log_flag = FALSE;
+    int64_t start_run_time = 0;
+    int64_t end_run_time = 0;
+    int64_t delta_run_time = 0;
+    int64_t start_search_time = 0;
+    int64_t end_search_time = 0;
+    int64_t delta_search_time = 0;
 }t_control; //control parameter
 
 

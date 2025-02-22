@@ -406,6 +406,7 @@ void Adachi::search_adachi2(int gx, int gy)
 
 	while ((map->pos.x != gx) || (map->pos.y != gy))
 	{ // ゴールするまで繰り返す
+		control->start_search_time = esp_timer_get_time();
 
 		set_wall(map->pos.x, map->pos.y); // 壁をセット
 
@@ -511,6 +512,9 @@ void Adachi::search_adachi2(int gx, int gy)
 			}
 			
 		}
+
+		control->end_search_time = esp_timer_get_time();
+		control->delta_search_time = control->end_search_time - control->start_search_time;
 		
 	}
 	set_wall(map->pos.x, map->pos.y); // 壁をセット
