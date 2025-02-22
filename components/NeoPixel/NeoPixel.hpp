@@ -33,6 +33,7 @@ public:
     void set(rgb_t,uint,uint);
     void show();
     void set_hsv(hsv_t,uint,uint);
+    void gaming_mouse();
 
 private:
     const char *TAG = "NeoPixel";

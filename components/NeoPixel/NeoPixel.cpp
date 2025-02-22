@@ -196,3 +196,19 @@ void NeoPixel::set_hsv(hsv_t hsv, uint start, uint len){
 
     set(rgb, start, len);
 }
+
+void NeoPixel::gaming_mouse(){
+    hsv_t hsv;
+    hsv.s = 100;  // 彩度: 100%
+    hsv.v = 50;  // 明るさ: 100%
+
+    while (1) {
+        for (int h = 0; h < 360; h += 5) { // 0°から360°まで変化
+            hsv.h = h;
+            set_hsv(hsv, 0, 1); // 全LEDに適用
+            show(); // 色を反映
+
+            vTaskDelay(pdMS_TO_TICKS(50)); // 100ms待機
+        }
+    }
+}
