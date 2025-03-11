@@ -6,13 +6,17 @@
 #define SECTION_HALF 0.045
 #define TURN_HALF M_PI
 #define TURN_QUARTER M_PI / 2.0
-#define OFFSET_DISTANCE 0.014
+#define OFFSET_DISTANCE 0.013
 #define FRONT_WALL_LIMIT_FL 25100
 #define FRONT_WALL_LIMIT_FR 14600
 #define DONE 1
 #define NOT_YET 0
+#define PRE_DISTANCE 0.0054
+#define FOL_DISTANCE 0.0051
 
 static BUZZER::buzzer_score_t pc98[] = {{2000, 100}, {1000, 100}};
+static BUZZER::buzzer_score_t pc98_2[] = {{1000, 100}, {2000, 100}};
+
 
 Motion::Motion()
 { /*std::cout << "Motion" << std::endl;*/
@@ -144,7 +148,7 @@ void Motion::run2()
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel) - (val->end.vel) * (val->end.vel)) / (2.0 *
                                                                                                                                 val->tar.acc)))
     {
-
+        // 壁あり->壁なし
         if (sens->wall.exist.l == FALSE && l_wall_check == TRUE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98, 2);
@@ -158,6 +162,22 @@ void Motion::run2()
             val->current.len = 0.055;
             hosei_flag = TRUE;
         }
+
+        // 壁なし->壁あり
+        if (sens->wall.exist.l == TRUE && l_wall_check == FALSE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98_2, 2);
+            val->current.len = 0.040;
+            hosei_flag = TRUE;
+        }
+
+        if (sens->wall.exist.r == TRUE && r_wall_check == FALSE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98_2, 2);
+            val->current.len = 0.040;
+            hosei_flag = TRUE;
+        }
+
 
         if (val->tar.len - 0.01 <= val->current.len)
         {
@@ -249,7 +269,7 @@ void Motion::run_half()
 
 void Motion::turn_left()
 {
-    vTaskDelay(100);
+    vTaskDelay(200);
 
     control->flag = TRUE;       // 制御ON
     sens->wall.control = FALSE; // 壁制御OFF
@@ -290,7 +310,7 @@ void Motion::turn_left()
 
 void Motion::turn_right()
 {
-    vTaskDelay(100);
+    vTaskDelay(200);
 
     control->flag = TRUE;       // 制御ON
     sens->wall.control = FALSE; // 壁制御OFF
@@ -332,7 +352,7 @@ void Motion::turn_right()
 
 void Motion::turn_half()
 {
-    vTaskDelay(100);
+    vTaskDelay(200);
 
     control->flag = TRUE;       // 制御ON
     sens->wall.control = FALSE; // 壁制御OFF
@@ -571,7 +591,7 @@ void Motion::back()
             control->test_flag = TRUE;
         }
 
-        if (val->current.vel >= -0.01 && count > 300)
+        if (val->current.vel >= -0.01 && count > 400)
         {
             break;
         }
@@ -623,9 +643,144 @@ void Motion::back()
     std::cout << "back" << std::endl;
 }
 
-void Motion::slalom()
+void Motion::slalom_left()
 {
-    std::cout << "slalom" << std::endl;
+    control->flag = TRUE;       // 制御ON
+    sens->wall.control = FALSE; // 壁制御OFF
+    val->current.flag = SLA_LEFT;   // 左旋回
+
+    val->I.vel_error = 0.0;
+    val->I.ang_error = 0.0;
+    val->I.wall_error = 0.0;
+
+    //val->tar.vel = 0.0;
+    val->tar.acc = 0.0;
+    val->tar.ang_vel = 0.0;
+    val->tar.ang_acc = 0.0;
+
+    val->current.len = 0.0;
+
+    //val->tar.ang_acc = val->max.ang_acc;
+    // val->max.ang_vel = val->max.ang_vel;
+
+    val->tar.rad = TURN_QUARTER;
+
+    // std::cout << "turn_left" << std::endl;
+
+    local_rad = val->current.rad; // 現在の角度を保存
+
+    val->tar.len = PRE_DISTANCE;
+    val->tar.vel = val->max.vel;
+
+    // 前距離
+    while ((val->tar.len) > val->current.len)
+    {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    val->tar.ang_acc = val->sla.ang_acc;
+    // 旋回
+    while (val->tar.rad - (val->current.rad - local_rad) > (val->tar.ang_vel * val->tar.ang_vel) / (2.0 * val->tar.ang_acc))
+    {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    val->tar.ang_acc = -(val->sla.ang_acc);
+
+    while (val->tar.rad > (val->current.rad - local_rad))
+    {
+        if (val->tar.ang_vel <= 0)
+        {
+            val->tar.ang_acc = 0;
+            val->tar.ang_vel = 0;
+        }
+
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+    val->tar.ang_acc = 0.0;
+    val->tar.ang_vel = 0.0;
+    val->current.len = 0.0;
+    val->tar.len = FOL_DISTANCE;
+    
+    // 後距離
+    while ((val->tar.len) > val->current.len)
+    {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    //control->flag = FALSE;
+
+    // std::cout << "turn" << std::endl;
+}
+
+void Motion::slalom_right()
+{
+    control->flag = TRUE;       // 制御ON
+    sens->wall.control = FALSE; // 壁制御OFF
+    val->current.flag = SLA_RIGHT;   // 左旋回
+
+    val->I.vel_error = 0.0;
+    val->I.ang_error = 0.0;
+    val->I.wall_error = 0.0;
+
+    //val->tar.vel = 0.0;
+    val->tar.acc = 0.0;
+    val->tar.ang_vel = 0.0;
+    val->tar.ang_acc = 0.0;
+
+    val->current.len = 0.0;
+
+    //val->tar.ang_acc = val->max.ang_acc;
+    // val->max.ang_vel = val->max.ang_vel;
+
+    val->tar.rad = -(TURN_QUARTER);
+
+    // std::cout << "turn_left" << std::endl;
+
+    local_rad = val->current.rad; // 現在の角度を保存
+
+    val->tar.len = PRE_DISTANCE;
+    val->tar.vel = val->max.vel;
+
+    // 前距離
+    while ((val->tar.len) > val->current.len)
+    {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    val->tar.ang_acc = -(val->sla.ang_acc);
+    // 旋回
+    while (-(val->tar.rad - (val->current.rad - local_rad)) > (val->tar.ang_vel * val->tar.ang_vel) / (2.0 * -(val->tar.ang_acc)))
+    {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    val->tar.ang_acc = val->sla.ang_acc;
+
+    while ((val->tar.rad) < (val->current.rad - local_rad))
+    {
+        if (val->tar.ang_vel >= 0)
+        {
+            val->tar.ang_acc = 0;
+            val->tar.ang_vel = 0;
+        }
+
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+    val->tar.ang_acc = 0.0;
+    val->tar.ang_vel = 0.0;
+    val->current.len = 0.0;
+    val->tar.len = FOL_DISTANCE;
+    
+    // 後距離
+    while ((val->tar.len) > val->current.len)
+    {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    //control->flag = FALSE;
+
+    // std::cout << "turn" << std::endl;
 }
 
 void Motion::check_enkaigei()

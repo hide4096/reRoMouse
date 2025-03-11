@@ -16,7 +16,8 @@ void Test::main_task() // Task Number 6
 {
     control->log_flag = TRUE;
     //motion.check_enkaigei(); // ok
-    motion.CheckMotorDuty(0.1, 0.1, 5000); // ok
+    //motion.CheckMotorDuty(0.1, 0.1, 5000); // ok
+    motion.back();
     control->log_flag = FALSE;
     std::cout << "Test" << std::endl;
 }
@@ -44,14 +45,14 @@ void Test2::main_task() // Task Number 7
     motion.run();  // 3
     motion.run();  // 4
     motion.run();  // 5
-    motion.run();  // 6
-    motion.run();  // 7
-    motion.run();  // 8
-    motion.run();  // 9
-    motion.run();  // 10
-    motion.run();  // 11
-    motion.run();  // 12
-    motion.run();  // 13
+    // motion.run();  // 6
+    // motion.run();  // 7
+    // motion.run();  // 8
+    // motion.run();  // 9
+    // motion.run();  // 10
+    // motion.run();  // 11
+    // motion.run();  // 12
+    // motion.run();  // 13
     //motion.run();  // 14
     motion.stop(); // 45mm
     motion.turn_half();
@@ -127,9 +128,15 @@ void Test5::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test5::main_task() // Task Number 10
 {
-    motion.set_pid_gain();       // ok
-    motion.set_wall_threshold(); // ok
-    std::cout << "Test" << std::endl;
+    control->log_flag = TRUE;
+    //motion.set_pid_gain();       // ok
+    //motion.set_wall_threshold(); // ok
+    motion.run2(); // ok
+    motion.slalom_left(); // ok
+    motion.slalom_right(); // ok
+    motion.stop(); // ok
+    control->log_flag = FALSE;
+    //std::cout << "Test" << std::endl;
 }
 
 void Test6::ptr_by_sensor(t_sens_data *_sens) { sens = _sens; }
@@ -154,17 +161,18 @@ void Test6::main_task() // Task Number 11
     motion.run2();  // 3
     motion.run2();  // 4
     motion.run2();  // 5
-    motion.run2();  // 6
-    motion.run2();  // 7
-    motion.run2();  // 8
-    motion.run2();  // 9
-    motion.run2();  // 10
-    motion.run2();  // 11
-    motion.run2();  // 12
-    motion.run2();  // 13
+    // motion.run2();  // 6
+    // motion.run2();  // 7
+    // motion.run2();  // 8
+    // motion.run2();  // 9
+    // motion.run2();  // 10
+    // motion.run2();  // 11
+    // motion.run2();  // 12
+    // motion.run2();  // 13
     //motion.run2();  // 14
     motion.stop(); // OK
     // motion.back();
+    motion.turn_half();
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
 }

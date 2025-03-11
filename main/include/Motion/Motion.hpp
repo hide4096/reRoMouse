@@ -27,7 +27,8 @@ class Motion : public Micromouse
         void stop();
         void stop2();
         void back();
-        void slalom();
+        void slalom_left();
+        void slalom_right();
         void check_enkaigei();
         void turn_left_2();
         void turn_right_2();
