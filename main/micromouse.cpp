@@ -107,7 +107,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     val.max.acc = 3.0;
     //val.tar.vel = 0.3;
     val.max.vel = 0.3;
-    val.min.vel = 0.1;
+    val.min.vel = 0.05;
     val.end.vel = 0.3;
 
     // 角速度
@@ -118,26 +118,30 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     val.min.ang_vel = M_PI/4.0;
     val.end.ang_vel = 0.0;
 
+    // スラロームパラメータ
+    val.sla.ang_acc = 145.0;
+    val.sla.ang_vel = 10.73;
+
     // 速度制御
     //control.v.Kp = pid_gain.speed_Kp;
     //control.v.Ki = pid_gain.speed_Ki;
     //control.v.Kd = pid_gain.speed_Kd;
     control.v.Kp = 10.0; // 20~30 10でもいいかも
-    control.v.Ki = 1000.0; // 100
+    control.v.Ki = 1200.0; // 100
     control.v.Kd = 0.001; 
     // 角速度制御
     //control.o.Kp = pid_gain.ang_vel_Kp;
     //control.o.Ki = pid_gain.ang_vel_Ki;
     //control.o.Kd = pid_gain.ang_vel_Kd;
-    control.o.Kp = 0.2; // 0.1
-    control.o.Ki = 30.0; // 30
+    control.o.Kp = 0.5; // 0.3,0.4でもあり
+    control.o.Ki = 20.0; // 30
     control.o.Kd = 0.0;
 
     // 壁制御
     //control.wall.Kp = pid_gain.wall_Kp;
     //control.wall.Ki = pid_gain.wall_Ki;
     //control.wall.Kd = pid_gain.wall_Kd;
-    control.wall.Kp = 0.0002; //0.0001
+    control.wall.Kp = 0.0003; //0.0001
     control.wall.Ki = 0.0;
     control.wall.Kd = 0.0;
 
@@ -154,17 +158,17 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     sens->wall.th_wall.fr = 3170;
     sens->wall.th_wall.l = 4820;
     sens->wall.th_wall.r = 4430;
-    sens->wall.th_control.l = 13050; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
-    sens->wall.th_control.r = 12250;
-    sens->wall.ref.l = 12050; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
-    sens->wall.ref.r = 11250;
+    sens->wall.th_control.l = 12850; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
+    sens->wall.th_control.r = 12050;
+    sens->wall.ref.l = 11250; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
+    sens->wall.ref.r = 11150;
 
     // 3612
     // 3769
 
     // ゴール座標
-    map.GOAL_X = 0;
-    map.GOAL_Y = 14;
+    map.GOAL_X = 7;
+    map.GOAL_Y = 7;
 
     ADS7066 *adc = driver->adc.get();
 
@@ -190,6 +194,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     uint16_t time_count = 0;
     const int MODE_MAX = 0b1111;
     const int MODE_MIN = 0;
+    control.flag = FALSE;
 
     /* メインループ */
     //printf("start main loop\n");
