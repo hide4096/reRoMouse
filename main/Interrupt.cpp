@@ -57,10 +57,23 @@ void Interrupt::calc_target()
     }
     else if (val->current.flag == RIGHT)
     {
-
         if (val->tar.ang_vel < -(val->max.ang_vel))
         {
             val->tar.ang_vel = -(val->max.ang_vel);
+        }
+    }
+    else if (val->current.flag == SLA_LEFT)
+    {
+        if (val->tar.ang_vel > val->sla.ang_vel)
+        {
+            val->tar.ang_vel = val->sla.ang_vel;
+        }
+    }
+    else if (val->current.flag == SLA_RIGHT)
+    {
+        if (val->tar.ang_vel < -(val->sla.ang_vel))
+        {
+            val->tar.ang_vel = -(val->sla.ang_vel);
         }
     }
 
