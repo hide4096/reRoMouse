@@ -9,6 +9,8 @@ public:
     void search_adachi(int gx, int gy);
     void search_adachi2(int gx, int gy);
     void fast_run(int gx, int gy);
+    void search_adachi_sla(int gx, int gy);
+    void fast_run_sla(int gx, int gy);
     void InitMaze();
 
 private:
@@ -19,6 +21,7 @@ private:
     t_bool is_unknown(int x, int y);
     int get_priority(int x, int y, t_direction dir);
     int get_nextdir(int x, int y, int mask, t_direction *dir);
+    uint8_t wall_back_count = 0;
 };
 
 #endif // ADACHI_HPP
