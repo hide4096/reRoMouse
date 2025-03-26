@@ -15,6 +15,7 @@
 #include "structs.hpp"
 #include "drivers.hpp"
 #include "micromouse.hpp"
+#include "files.hpp"
 
 // #include "freertos/event_groups.h"
 // #include "esp_system.h"
@@ -1185,6 +1186,8 @@ extern "C" void app_main(void)
     //uint32_t h = 0, h1 = 0;
     //float t = 0.0;
     //float rad = 0.0;
+    init_files();
+    
     while (1)
     {
         // h = driver->imu->accelZ() * 360;
