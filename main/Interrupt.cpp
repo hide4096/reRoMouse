@@ -379,15 +379,15 @@ void Interrupt::logging()
         vTaskDelete(NULL);
     }
     uint32_t mem_offset = 0;
-    int16_t adcs[34];
-    int16_t arr[4];
-    int16_t arr2[4];
+    int16_t adcs[27];
+    //int16_t arr[4];
+    //int16_t arr2[4];
 
     ESP_LOGI("logging", "start logging");
 
     while (1)
     {
-        arr[0] = (uint16_t)(control->delta_run_time & 0xFFFF);
+        /*arr[0] = (uint16_t)(control->delta_run_time & 0xFFFF);
         arr[1] = (uint16_t)((control->delta_run_time >> 16) & 0xFFFF);
         arr[2] = (uint16_t)((control->delta_run_time >> 32) & 0xFFFF);
         arr[3] = (uint16_t)((control->delta_run_time >> 48) & 0xFFFF);
@@ -395,7 +395,7 @@ void Interrupt::logging()
         arr2[0] = (uint16_t)(control->delta_search_time & 0xFFFF);
         arr2[1] = (uint16_t)((control->delta_search_time >> 16) & 0xFFFF);
         arr2[2] = (uint16_t)((control->delta_search_time >> 32) & 0xFFFF);
-        arr2[3] = (uint16_t)((control->delta_search_time >> 48) & 0xFFFF);
+        arr2[3] = (uint16_t)((control->delta_search_time >> 48) & 0xFFFF);*/
 
         // if (control->log_flag == TRUE)
         //{
@@ -426,14 +426,15 @@ void Interrupt::logging()
         adcs[23] = (int16_t)(val->current.len * 1000);
         adcs[24] = (int16_t)(val->tar.len * 1000);
         adcs[25] = delta_time;
-        adcs[26] = arr[0];
+        /*adcs[26] = arr[0];
         adcs[27] = arr[1];
         adcs[28] = arr[2];
         adcs[29] = arr[3];
         adcs[30] = arr2[0];
         adcs[31] = arr2[1];
         adcs[32] = arr2[2];
-        adcs[33] = arr2[3];
+        adcs[33] = arr2[3];*/
+        adcs[26] = map->thinking_flag;
         err = esp_partition_write(partition, mem_offset, adcs, sizeof(adcs));
         if (err != ESP_OK)
         {
