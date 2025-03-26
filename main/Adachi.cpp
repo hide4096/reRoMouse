@@ -31,6 +31,7 @@ void Adachi::init_map_all(int x, int y)
 	// 迷路の歩数Mapを初期化する。全体を0xff、引数の座標x,yは0で初期化する
 
 	int i, j;
+	bool all_filed = true; // 全てのマスが埋まっているかどうかのフラグ
 
 	for (i = 0; i < MAZESIZE_X; i++) // 迷路の大きさ分ループ(x座標)　
 	{
@@ -39,6 +40,7 @@ void Adachi::init_map_all(int x, int y)
 			if (is_unknown(i, j) == true)
 			{
 				map->size[i][j] = 0;
+				all_filed = false;
 			}
 			else
 			{
@@ -47,7 +49,10 @@ void Adachi::init_map_all(int x, int y)
 		}
 	}
 
-	map->size[x][y] = 0; // ゴール座標の歩数を０に設定
+	if (all_filed == true)
+	{
+		map->size[x][y] = 0; // ゴール座標の歩数を０に設定
+	}
 }
 
 void Adachi::make_map(int x, int y, int mask) // 歩数マップを作成する
@@ -357,9 +362,9 @@ void Adachi::search_adachi2(int gx, int gy)
 	// 引数gx,gyに向かって足立法で迷路を探索する
 	t_direction glob_nextdir; // 次に向かう方向を記録する変数
 
-	//if ((map->pos.x == 0) && (map->pos.y == 0))
+	// if ((map->pos.x == 0) && (map->pos.y == 0))
 	//{
-		offset2();
+	offset2();
 	//}
 
 	switch (get_nextdir(gx, gy, MASK_SEARCH, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
@@ -406,7 +411,7 @@ void Adachi::search_adachi2(int gx, int gy)
 		map->pos.x--; // 西を向いたときはX座標を減らす
 		break;
 	}
-	//printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+	// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
 
 	while ((map->pos.x != gx) || (map->pos.y != gy))
 	{ // ゴールするまで繰り返す
@@ -423,22 +428,22 @@ void Adachi::search_adachi2(int gx, int gy)
 
 		case RIGHT: // バグあり
 			stop();
-			if((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
+			if ((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
 			{
 				bz->play_melody(pc98, 2);
 				wall_back_count++;
 			}
 
-			if((wall_back_count % 3 == 0))
+			if ((wall_back_count % 3 == 0))
 			{
-				if((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
+				if ((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
 				{ // 正面壁あり、半回転後壁当て
-					//stop();
-					turn_half(); 
+					// stop();
+					turn_half();
 					back();
 					offset();
 					turn_right_2();
-					if((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
+					if ((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
 					{ // さらに左側壁あり、半回転後壁当て
 						turn_half();
 						back();
@@ -450,47 +455,48 @@ void Adachi::search_adachi2(int gx, int gy)
 						turn_half();
 						run_half();
 					}
-				}else{
+				}
+				else
+				{
 					turn_right_2();
 					run_half();
 				}
 			}
 			else
 			{
-				//stop();
+				// stop();
 				turn_right_2();
 				run_half();
 			}
 
-			//stop2();
+			// stop2();
 			/*
 			stop();
 			turn_right_2();
 			run_half();
 			*/
 
-			
 			// printf("turn_right\n");
 			break;
 
 		case LEFT:
 
 			stop();
-			if((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
+			if ((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
 			{
 				bz->play_melody(pc98, 2);
 				wall_back_count++;
-			}	
-			if((wall_back_count % 3 == 0)) // L字かつ３回毎の場合、壁当て
+			}
+			if ((wall_back_count % 3 == 0)) // L字かつ３回毎の場合、壁当て
 			{
-				if((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
+				if ((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
 				{
-					//stop();
+					// stop();
 					turn_half();
 					back();
 					offset();
 					turn_left_2();
-					if((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
+					if ((sens->wall.val.fl > 30000) && (sens->wall.val.fl > 30000))
 					{
 						turn_half();
 						back();
@@ -502,18 +508,20 @@ void Adachi::search_adachi2(int gx, int gy)
 						turn_half();
 						run_half();
 					}
-				}else{
+				}
+				else
+				{
 					turn_left_2();
 					run_half();
 				}
 			}
 			else
 			{
-				//stop();
+				// stop();
 				turn_left_2();
 				run_half();
 			}
-			//stop2();
+			// stop2();
 			/*
 			stop();
 			turn_left_2();
@@ -523,11 +531,11 @@ void Adachi::search_adachi2(int gx, int gy)
 			break;
 
 		case REAR: // 袋小は、壁当て起きやすくするため閾値低め
-			//stop2();
+			// stop2();
 			stop();
 			if ((sens->wall.val.fl > 10000) && (sens->wall.val.fr > 10000) && (sens->wall.val.l > 15000))
 			{
-				//stop();
+				// stop();
 				turn_right_2();
 				back();
 				offset();
@@ -537,7 +545,7 @@ void Adachi::search_adachi2(int gx, int gy)
 			}
 			else if ((sens->wall.val.fl > 10000) && (sens->wall.val.fr > 10000) && (sens->wall.val.r > 15000))
 			{
-				//stop();
+				// stop();
 				turn_left_2();
 				back();
 				offset();
@@ -547,14 +555,14 @@ void Adachi::search_adachi2(int gx, int gy)
 			}
 			else if ((sens->wall.val.fl > 10000) && (sens->wall.val.fr > 10000))
 			{
-				//stop();
+				// stop();
 				turn_half();
 				back();
 				offset2();
 			}
 			else
 			{
-				//stop();
+				// stop();
 				turn_half();
 			}
 			/*stop();
@@ -565,7 +573,7 @@ void Adachi::search_adachi2(int gx, int gy)
 			back();
 			offset2();
 			*/
-			
+
 			run_half();
 			// printf("turn_half\n");
 			break;
@@ -598,14 +606,12 @@ void Adachi::search_adachi2(int gx, int gy)
 		{
 			if (map->search_time > 60000)
 			{
-				//init_map(gx, gy);
+				// init_map(gx, gy);
 			}
-			
 		}
 
 		control->end_search_time = esp_timer_get_time();
 		control->delta_search_time = control->end_search_time - control->start_search_time;
-		
 	}
 	set_wall(map->pos.x, map->pos.y); // 壁をセット
 
@@ -622,9 +628,9 @@ void Adachi::search_adachi(int gx, int gy)
 	// 引数gx,gyに向かって足立法で迷路を探索する
 	t_direction glob_nextdir; // 次に向かう方向を記録する変数
 
-	//if ((map->pos.x == 0) && (map->pos.y == 0))
+	// if ((map->pos.x == 0) && (map->pos.y == 0))
 	//{
-		offset2();
+	offset2();
 	//}
 
 	switch (get_nextdir(gx, gy, MASK_SEARCH, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
@@ -671,7 +677,7 @@ void Adachi::search_adachi(int gx, int gy)
 		map->pos.x--; // 西を向いたときはX座標を減らす
 		break;
 	}
-	//printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+	// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
 
 	while ((map->pos.x != gx) || (map->pos.y != gy))
 	{ // ゴールするまで繰り返す
@@ -703,7 +709,7 @@ void Adachi::search_adachi(int gx, int gy)
 			stop();
 			if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.l == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_right_2();
 				back();
 				offset();
@@ -713,7 +719,7 @@ void Adachi::search_adachi(int gx, int gy)
 			}
 			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.r == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_left_2();
 				back();
 				offset();
@@ -723,14 +729,14 @@ void Adachi::search_adachi(int gx, int gy)
 			}
 			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_half();
 				back();
 				offset2();
 			}
 			else
 			{
-				//stop();
+				// stop();
 				turn_half();
 			}
 			/*stop();
@@ -741,7 +747,7 @@ void Adachi::search_adachi(int gx, int gy)
 			back();
 			offset2();
 			*/
-			
+
 			run_half();
 			// printf("turn_half\n");
 			break;
@@ -774,11 +780,9 @@ void Adachi::search_adachi(int gx, int gy)
 		{
 			if (map->search_time > 60000)
 			{
-				//init_map(gx, gy);
+				// init_map(gx, gy);
 			}
-			
 		}
-		
 	}
 	set_wall(map->pos.x, map->pos.y); // 壁をセット
 
@@ -796,18 +800,17 @@ void Adachi::fast_run(int gx, int gy)
 	t_direction glob_nextdir; // 次に向かう方向を記録する変数
 	uint8_t straight_count = 0;
 
-
-	//if ((map->pos.x == 0) && (map->pos.y == 0))
+	// if ((map->pos.x == 0) && (map->pos.y == 0))
 	//{
-		offset2();
+	offset2();
 	//}
 
 	switch (get_nextdir(gx, gy, MASK_SECOND, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
 	{
 	case FRONT:
 		straight_count++;
-		//run_half();
-		// printf("run_half\n");
+		// run_half();
+		//  printf("run_half\n");
 		break;
 
 	case RIGHT:
@@ -850,19 +853,19 @@ void Adachi::fast_run(int gx, int gy)
 		map->pos.x--; // 西を向いたときはX座標を減らす
 		break;
 	}
-	//printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+	// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
 
 	while ((map->pos.x != gx) || (map->pos.y != gy))
 	{ // ゴールするまで繰り返す
 
-		//set_wall(map->pos.x, map->pos.y); // 壁をセット
+		// set_wall(map->pos.x, map->pos.y); // 壁をセット
 
 		switch (get_nextdir(gx, gy, MASK_SECOND, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
 		{
 		case FRONT:
 			straight_count++;
-			//run();
-			// printf("run\n");
+			// run();
+			//  printf("run\n");
 			break;
 
 		case RIGHT:
@@ -910,7 +913,7 @@ void Adachi::fast_run(int gx, int gy)
 		}
 		// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
 	}
-	//set_wall(map->pos.x, map->pos.y); // 壁をセット
+	// set_wall(map->pos.x, map->pos.y); // 壁をセット
 
 	fast_straight(straight_count);
 	//("stop\n");
@@ -973,7 +976,7 @@ void Adachi::search_adachi_sla(int gx, int gy)
 		map->pos.x--; // 西を向いたときはX座標を減らす
 		break;
 	}
-	//printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+	// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
 
 	while ((map->pos.x != gx) || (map->pos.y != gy))
 	{ // ゴールするまで繰り返す
@@ -1001,7 +1004,7 @@ void Adachi::search_adachi_sla(int gx, int gy)
 			stop();
 			if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.l == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_right_2();
 				back();
 				offset();
@@ -1011,7 +1014,7 @@ void Adachi::search_adachi_sla(int gx, int gy)
 			}
 			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.r == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_left_2();
 				back();
 				offset();
@@ -1021,14 +1024,14 @@ void Adachi::search_adachi_sla(int gx, int gy)
 			}
 			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_half();
 				back();
 				offset2();
 			}
 			else
 			{
-				//stop();
+				// stop();
 				turn_half();
 			}
 			/*stop();
@@ -1039,7 +1042,7 @@ void Adachi::search_adachi_sla(int gx, int gy)
 			back();
 			offset2();
 			*/
-			
+
 			run_half();
 			// printf("turn_half\n");
 			break;
@@ -1068,15 +1071,14 @@ void Adachi::search_adachi_sla(int gx, int gy)
 		}
 		// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
 
-		if (map->flag == ALL_SEARCH)
+		/*if (map->flag == ALL_SEARCH)
 		{
 			if (map->search_time > 60000)
 			{
 				//init_map(gx, gy);
 			}
-			
-		}
-		
+
+		}*/
 	}
 	set_wall(map->pos.x, map->pos.y); // 壁をセット
 
@@ -1089,7 +1091,6 @@ void Adachi::search_adachi_sla(int gx, int gy)
 
 void Adachi::fast_run_sla(int gx, int gy)
 {
-
 
 	// 引数gx,gyに向かって足立法で迷路を探索する
 	t_direction glob_nextdir; // 次に向かう方向を記録する変数
@@ -1143,12 +1144,12 @@ void Adachi::fast_run_sla(int gx, int gy)
 		map->pos.x--; // 西を向いたときはX座標を減らす
 		break;
 	}
-	//printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+	// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
 
 	while ((map->pos.x != gx) || (map->pos.y != gy))
 	{ // ゴールするまで繰り返す
 
-		//set_wall(map->pos.x, map->pos.y); // 壁をセット
+		// set_wall(map->pos.x, map->pos.y); // 壁をセット
 
 		switch (get_nextdir(gx, gy, MASK_SECOND, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
 		{
@@ -1171,7 +1172,7 @@ void Adachi::fast_run_sla(int gx, int gy)
 			stop();
 			if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.l == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_right_2();
 				back();
 				offset();
@@ -1181,7 +1182,7 @@ void Adachi::fast_run_sla(int gx, int gy)
 			}
 			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.r == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_left_2();
 				back();
 				offset();
@@ -1191,14 +1192,14 @@ void Adachi::fast_run_sla(int gx, int gy)
 			}
 			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE)
 			{
-				//stop();
+				// stop();
 				turn_half();
 				back();
 				offset2();
 			}
 			else
 			{
-				//stop();
+				// stop();
 				turn_half();
 			}
 			/*stop();
@@ -1209,7 +1210,7 @@ void Adachi::fast_run_sla(int gx, int gy)
 			back();
 			offset2();
 			*/
-			
+
 			run_half();
 			// printf("turn_half\n");
 			break;
@@ -1242,18 +1243,170 @@ void Adachi::fast_run_sla(int gx, int gy)
 		{
 			if (map->search_time > 60000)
 			{
-				//init_map(gx, gy);
+				// init_map(gx, gy);
 			}
-			
 		}
-		
 	}
-	//set_wall(map->pos.x, map->pos.y); // 壁をセット
+	// set_wall(map->pos.x, map->pos.y); // 壁をセット
 
 	stop();
 	//("stop\n");
 	turn_half();
 	// printf("turn_half\n");
+	map->pos.dir = static_cast<t_direction>((map->pos.dir + 6) % 4);
+}
+
+void Adachi::fast_run_sla2(int gx, int gy)
+{
+	// 引数gx,gyに向かって足立法で迷路を探索する
+	t_direction glob_nextdir; // 次に向かう方向を記録する変数
+	uint8_t straight_count = 0;
+
+	if ((map->pos.x == 0) && (map->pos.y == 0))
+	{
+		offset2();
+	}
+
+	switch (get_nextdir(gx, gy, MASK_SECOND, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
+	{
+	case FRONT:
+		run_half();
+		break;
+
+	case RIGHT:
+		turn_right_2();
+		run_half();
+		straight_count = 1;
+		break;
+
+	case LEFT:
+		turn_left_2();
+		run_half();
+		straight_count = 1;
+		break;
+
+	case REAR:
+		turn_half();
+		run_half();
+		straight_count = 1;
+		break;
+	}
+
+	map->pos.dir = glob_nextdir; // 方向を更新
+
+	// 向いた方向によって自分の座標を更新する
+	switch (map->pos.dir)
+	{
+	case NORTH:
+		map->pos.y++; // 北を向いた時はY座標を増やす
+		break;
+
+	case EAST:
+		map->pos.x++; // 東を向いた時はX座標を増やす
+		break;
+
+	case SOUTH:
+		map->pos.y--; // 南を向いた時はY座標を減らす
+		break;
+
+	case WEST:
+		map->pos.x--; // 西を向いたときはX座標を減らす
+		break;
+	}
+	// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+
+	while ((map->pos.x != gx) || (map->pos.y != gy))
+	{ // ゴールするまで繰り返す
+
+		// set_wall(map->pos.x, map->pos.y); // 壁をセット
+
+		switch (get_nextdir(gx, gy, MASK_SECOND, &glob_nextdir)) // 次に行く方向を戻り値とする関数を呼ぶ
+		{
+		case FRONT:
+			straight_count++;
+			break;
+
+		case RIGHT:
+			fast_straight(straight_count);
+			slalom_right();
+			straight_count = 0;
+			break;
+
+		case LEFT:
+			fast_straight(straight_count);
+			slalom_left();
+			straight_count = 0;
+			break;
+
+		case REAR:
+			fast_stop(straight_count);
+			if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.l == TRUE)
+			{
+				// stop();
+				turn_right_2();
+				back();
+				offset();
+				turn_right_2();
+				back();
+				offset2();
+			}
+			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE && sens->wall.exist.r == TRUE)
+			{
+				// stop();
+				turn_left_2();
+				back();
+				offset();
+				turn_left_2();
+				back();
+				offset2();
+			}
+			else if (sens->wall.exist.fl == TRUE && sens->wall.exist.fr == TRUE)
+			{
+				// stop();
+				turn_half();
+				back();
+				offset2();
+			}
+			else
+			{
+				// stop();
+				turn_half();
+			}
+
+			// run_half();
+			straight_count = 1;
+			break;
+		}
+
+		map->pos.dir = glob_nextdir; // 方向を更新
+
+		// 向いた方向によって自分の座標を更新する
+		switch (map->pos.dir)
+		{
+		case NORTH:
+			map->pos.y++; // 北を向いた時はY座標を増やす
+			break;
+
+		case EAST:
+			map->pos.x++; // 東を向いた時はX座標を増やす
+			break;
+
+		case SOUTH:
+			map->pos.y--; // 南を向いた時はY座標を減らす
+			break;
+
+		case WEST:
+			map->pos.x--; // 西を向いたときはX座標を減らす
+			break;
+		}
+		// printf("map->pos.x = %d, map->pos.y = %d\n", map->pos.x, map->pos.y);
+	}
+	fast_straight(straight_count);
+	stop();
+	// set_wall(map->pos.x, map->pos.y); // 壁をセット
+
+	turn_half();
+
 	map->pos.dir = static_cast<t_direction>((map->pos.dir + 6) % 4);
 }
 
@@ -1275,4 +1428,3 @@ void Adachi::InitMaze()
 		}
 	}
 }
-

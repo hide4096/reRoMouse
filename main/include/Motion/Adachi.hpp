@@ -11,6 +11,7 @@ public:
     void fast_run(int gx, int gy);
     void search_adachi_sla(int gx, int gy);
     void fast_run_sla(int gx, int gy);
+    void fast_run_sla2(int gx, int gy);
     void InitMaze();
 
 private:
