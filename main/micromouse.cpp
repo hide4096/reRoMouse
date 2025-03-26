@@ -156,12 +156,12 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //sens.wall.ref.r = wall_threshold.ref_r;
     sens->wall.th_wall.fl = 2590;
     sens->wall.th_wall.fr = 3170;
-    sens->wall.th_wall.l = 4820;
-    sens->wall.th_wall.r = 4430;
-    sens->wall.th_control.l = 12850; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
-    sens->wall.th_control.r = 12050;
-    sens->wall.ref.l = 11250; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
-    sens->wall.ref.r = 11150;
+    sens->wall.th_wall.l = 4920;
+    sens->wall.th_wall.r = 4730;
+    sens->wall.th_control.l = 10050; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
+    sens->wall.th_control.r = 10250;
+    sens->wall.ref.l = 11550; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
+    sens->wall.ref.r = 11450;
 
     // 3612
     // 3769
