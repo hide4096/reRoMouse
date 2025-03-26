@@ -1,7 +1,7 @@
 #include "include/UI/log.hpp"
 
-#define MAZESIZE_X 32
-#define MAZESIZE_Y 32
+#define MAZESIZE_X 16
+#define MAZESIZE_Y 16
 
 void Log::ptr_by_sensor(t_sens_data *_sens) { sens = _sens; }
 
@@ -25,7 +25,7 @@ void Log::log_print()
     }
 
     uint32_t mem_offset = 0;
-    int16_t data[34];
+    int16_t data[27];
     int64_t run_time = 0;
     int64_t search_time = 0;
 
@@ -37,15 +37,16 @@ void Log::log_print()
             break;
         }
         
-        run_time = ((int64_t)data[29] << 48) | ((int64_t)data[28] << 32) | ((int64_t)data[27] << 16) | (int64_t)data[26];
-        search_time = ((int64_t)data[33] << 48) | ((int64_t)data[32] << 32) | ((int64_t)data[31] << 16) | (int64_t)data[30];
+        //run_time = ((int64_t)data[29] << 48) | ((int64_t)data[28] << 32) | ((int64_t)data[27] << 16) | (int64_t)data[26];
+        //search_time = ((int64_t)data[33] << 48) | ((int64_t)data[32] << 32) | ((int64_t)data[31] << 16) | (int64_t)data[30];
 
         printf("%4d,%4d,%4d,%4d,%4d,", data[0], data[1], data[2], data[3], data[4]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[5], data[6], data[7], data[8], data[9]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[10], data[11], data[12], data[13], data[14]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[15], data[16], data[17], data[18], data[19]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[20], data[21], data[22], data[23], data[24]);
-        printf("%1d,%1lld,%1lld\n", data[25], run_time, search_time);
+        //printf("%1d,%1lld,%1lld\n", data[25], run_time, search_time);
+        printf("%1d,%1d\n", data[25], data[26]);
 
         mem_offset += sizeof(data);
         if (mem_offset >= partition->size)
@@ -214,9 +215,39 @@ void Log1::map_print() // Task Number 14
     }
 }
 
+void Log1::map_output_txt()
+{
+    *map = map_read();
+     printf("Maze Size\n");
+    for (int y = 0; y < 16; y++)
+    {
+        for (int x = 0; x < 16; x++)
+        {
+            printf("%d,", static_cast<int>(map->size[y][x]));
+        }
+        printf("\n");
+    }
+
+    printf("Wall Data (N, E, S, W)\n");
+    for (int y = 0; y < 16; y++)
+    {
+        for (int x = 0; x < 16; x++)
+        {
+            printf("%d,%d,%d,%d,", 
+                   static_cast<int>(map->wall[x][y].north),
+                   static_cast<int>(map->wall[x][y].east),
+                   static_cast<int>(map->wall[x][y].south),
+                   static_cast<int>(map->wall[x][y].west));
+        }
+        printf("\n");
+    }
+
+    printf("Goal,%d,%d\n", static_cast<int>(map->GOAL_X), static_cast<int>(map->GOAL_Y));
+}
+
 void Log1::main_task()
 {
     // log_print();
-    map_print();
+    map_output_txt();
     //std::cout << "Log1" << std::endl;
 }
