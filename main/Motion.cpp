@@ -17,7 +17,6 @@
 static BUZZER::buzzer_score_t pc98[] = {{2000, 100}, {1000, 100}};
 static BUZZER::buzzer_score_t pc98_2[] = {{1000, 100}, {2000, 100}};
 
-
 Motion::Motion()
 { /*std::cout << "Motion" << std::endl;*/
 }
@@ -72,8 +71,8 @@ void Motion::run()
         // val->tar.len = 45;
         val->tar.len = 0.045;
     }*/
-    //np->set_hsv({240, 100, 100}, 0, 1);
-    //np->show();
+    // np->set_hsv({240, 100, 100}, 0, 1);
+    // np->show();
     led->set(0b0000);
 
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel) - (val->end.vel) * (val->end.vel)) / (2.0 *
@@ -106,8 +105,8 @@ void Motion::run()
 
     // val->tar.vel = val->tar.vel;
     val->tar.acc = 0.0;
-    //np->set_hsv({0, 100, 100}, 0, 1);
-    //np->show();
+    // np->set_hsv({0, 100, 100}, 0, 1);
+    // np->show();
 
     // control->flag = FALSE;
     led->set(0b1111);
@@ -120,6 +119,7 @@ void Motion::run()
 
 void Motion::run2()
 {
+    map->thinking_flag = FALSE;
     control->flag = TRUE;      // 制御ON
     sens->wall.control = TRUE; // 壁制御OFF
 
@@ -167,7 +167,7 @@ void Motion::run2()
         if (sens->wall.exist.l == TRUE && l_wall_check == FALSE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98_2, 2);
-            val->current.len = 0.040;
+            val->current.len = 0.038; // 補正後の距離を伸ばしたい場合は、値を小さく
             hosei_flag = TRUE;
         }
 
@@ -177,7 +177,6 @@ void Motion::run2()
             val->current.len = 0.040;
             hosei_flag = TRUE;
         }
-
 
         if (val->tar.len - 0.01 <= val->current.len)
         {
@@ -203,6 +202,8 @@ void Motion::run2()
     val->tar.acc = 0.0;
 
     // control->flag = FALSE;
+
+    map->thinking_flag = TRUE;
 
     // std::cout << "run" << std::endl;
 }
@@ -456,8 +457,8 @@ void Motion::stop()
 
     val->current.len = 0.0;
 
-    np->set_hsv({240, 100, 100}, 0, 1);
-    np->show();
+    // np->set_hsv({240, 100, 100}, 0, 1);
+    // np->show();
 
     // std::cout << "stop" << std::endl;
 }
@@ -645,23 +646,24 @@ void Motion::back()
 
 void Motion::slalom_left()
 {
-    control->flag = TRUE;       // 制御ON
-    sens->wall.control = FALSE; // 壁制御OFF
-    val->current.flag = SLA_LEFT;   // 左旋回
+    map->thinking_flag = FALSE;
+    control->flag = TRUE;         // 制御ON
+    sens->wall.control = FALSE;   // 壁制御OFF
+    val->current.flag = SLA_LEFT; // 左旋回
 
     val->I.vel_error = 0.0;
     val->I.ang_error = 0.0;
     val->I.wall_error = 0.0;
 
-    //val->tar.vel = 0.0;
+    // val->tar.vel = 0.0;
     val->tar.acc = 0.0;
     val->tar.ang_vel = 0.0;
     val->tar.ang_acc = 0.0;
 
     val->current.len = 0.0;
 
-    //val->tar.ang_acc = val->max.ang_acc;
-    // val->max.ang_vel = val->max.ang_vel;
+    // val->tar.ang_acc = val->max.ang_acc;
+    //  val->max.ang_vel = val->max.ang_vel;
 
     val->tar.rad = TURN_QUARTER;
 
@@ -701,37 +703,40 @@ void Motion::slalom_left()
     val->tar.ang_vel = 0.0;
     val->current.len = 0.0;
     val->tar.len = FOL_DISTANCE;
-    
+
     // 後距離
     while ((val->tar.len) > val->current.len)
     {
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
-    //control->flag = FALSE;
+    // control->flag = FALSE;
+
+    map->thinking_flag = TRUE;
 
     // std::cout << "turn" << std::endl;
 }
 
 void Motion::slalom_right()
 {
-    control->flag = TRUE;       // 制御ON
-    sens->wall.control = FALSE; // 壁制御OFF
-    val->current.flag = SLA_RIGHT;   // 左旋回
+    map->thinking_flag = FALSE;
+    control->flag = TRUE;          // 制御ON
+    sens->wall.control = FALSE;    // 壁制御OFF
+    val->current.flag = SLA_RIGHT; // 左旋回
 
     val->I.vel_error = 0.0;
     val->I.ang_error = 0.0;
     val->I.wall_error = 0.0;
 
-    //val->tar.vel = 0.0;
+    // val->tar.vel = 0.0;
     val->tar.acc = 0.0;
     val->tar.ang_vel = 0.0;
     val->tar.ang_acc = 0.0;
 
     val->current.len = 0.0;
 
-    //val->tar.ang_acc = val->max.ang_acc;
-    // val->max.ang_vel = val->max.ang_vel;
+    // val->tar.ang_acc = val->max.ang_acc;
+    //  val->max.ang_vel = val->max.ang_vel;
 
     val->tar.rad = -(TURN_QUARTER);
 
@@ -771,14 +776,16 @@ void Motion::slalom_right()
     val->tar.ang_vel = 0.0;
     val->current.len = 0.0;
     val->tar.len = FOL_DISTANCE;
-    
+
     // 後距離
     while ((val->tar.len) > val->current.len)
     {
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
-    //control->flag = FALSE;
+    // control->flag = FALSE;
+
+    map->thinking_flag = TRUE;
 
     // std::cout << "turn" << std::endl;
 }
@@ -1209,6 +1216,7 @@ void Motion::offset2()
 
 void Motion::fast_straight(uint8_t straight_count)
 {
+    map->thinking_flag = FALSE;
     control->flag = TRUE;      // 制御ON
     sens->wall.control = TRUE; // 壁制御OFF
 
@@ -1222,7 +1230,127 @@ void Motion::fast_straight(uint8_t straight_count)
     val->tar.len = SECTION * straight_count;
     val->current.len = 0.0;
     val->tar.acc = val->max.acc;
-    // val->tar.vel = 0.0;
+
+    val->max.vel = CalcVelocity((val->tar.len - 0.09), val->fast_ref.vel, val->max.acc); // 一区画以上の場合に加速区間を設定
+    val->end.vel = val->fast_ref.vel;
+
+    bool l_wall_check = sens->wall.exist.l;
+    bool r_wall_check = sens->wall.exist.r;
+    bool hosei_flag = FALSE;
+    uint8_t section_cnt = 0;
+
+    while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel) - (val->end.vel) * (val->end.vel)) / (2.0 *
+                                                                                                                                val->tar.acc)))
+    {
+        // 壁あり->壁なし
+        if (sens->wall.exist.l == FALSE && l_wall_check == TRUE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98, 2);
+            val->current.len = 0.055 + SECTION * (section_cnt);
+            hosei_flag = TRUE;
+        }
+
+        if (sens->wall.exist.r == FALSE && r_wall_check == TRUE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98, 2);
+            val->current.len = 0.055 + SECTION * (section_cnt);
+            hosei_flag = TRUE;
+        }
+
+        // 壁なし->壁あり
+        if (sens->wall.exist.l == TRUE && l_wall_check == FALSE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98_2, 2);
+            val->current.len = 0.038 + SECTION * (section_cnt); // 補正後の距離を伸ばしたい場合は、値を小さく
+            hosei_flag = TRUE;
+        }
+
+        if (sens->wall.exist.r == TRUE && r_wall_check == FALSE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98_2, 2);
+            val->current.len = 0.040 + SECTION * (section_cnt);
+            hosei_flag = TRUE;
+        }
+
+        section_cnt = static_cast<uint8_t>(std::floor(val->current.len / SECTION));
+
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    // std::cout << "##### deceleration #####" << std::endl;
+    val->tar.acc = -(val->max.acc);
+
+    while ((val->tar.len) > val->current.len)
+    {
+        if (val->tar.vel <= val->fast_ref.vel)
+        {
+            val->tar.acc = 0;
+            val->tar.vel = val->fast_ref.vel;
+        }
+
+        // 減速時壁切れ補正(ただし、連続する直線区間の距離によってかなり変動する)
+
+        // 壁あり->壁なし
+        if (sens->wall.exist.l == FALSE && l_wall_check == TRUE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98, 2);
+            val->current.len = 0.055 + SECTION * (section_cnt);
+            hosei_flag = TRUE;
+        }
+
+        if (sens->wall.exist.r == FALSE && r_wall_check == TRUE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98, 2);
+            val->current.len = 0.055 + SECTION * (section_cnt);
+            hosei_flag = TRUE;
+        }
+
+        // 壁なし->壁あり
+        if (sens->wall.exist.l == TRUE && l_wall_check == FALSE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98_2, 2);
+            val->current.len = 0.038 + SECTION * (section_cnt); // 補正後の距離を伸ばしたい場合は、値を小さく
+            hosei_flag = TRUE;
+        }
+
+        if (sens->wall.exist.r == TRUE && r_wall_check == FALSE && hosei_flag == FALSE)
+        {
+            bz->play_melody(pc98_2, 2);
+            val->current.len = 0.040 + SECTION * (section_cnt);
+            hosei_flag = TRUE;
+        }
+
+        section_cnt = static_cast<uint8_t>(std::floor(val->current.len / SECTION));
+
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
+    val->tar.acc = 0.0;
+    val->tar.vel = val->fast_ref.vel;
+    val->max.vel = val->fast_ref.vel;
+
+    map->thinking_flag = TRUE;
+}
+
+void Motion::fast_stop(uint8_t straight_count)
+{
+    map->thinking_flag = FALSE;
+    control->flag = TRUE;      // 制御ON
+    sens->wall.control = TRUE; // 壁制御OFF
+
+    val->I.vel_error = 0.0;
+    val->I.ang_error = 0.0;
+    val->I.wall_error = 0.0;
+
+    val->tar.ang_acc = 0.0;
+    val->tar.ang_vel = 0.0;
+
+    val->tar.len = SECTION * straight_count;
+    val->current.len = 0.0;
+    val->tar.acc = val->max.acc;
+
+    val->max.vel = CalcVelocity(val->tar.len, val->fast_ref.vel, val->max.acc);
+    val->end.vel = 0;
 
     while (((val->tar.len - 0.01) - val->current.len) > (((val->tar.vel) * (val->tar.vel)) / (2.0 *
                                                                                               val->tar.acc)))
@@ -1245,6 +1373,7 @@ void Motion::fast_straight(uint8_t straight_count)
 
     val->tar.acc = 0.0;
     val->tar.vel = 0.0;
+    val->max.vel = val->fast_ref.vel;
 
     while (val->current.vel >= 0.0)
     {
@@ -1253,12 +1382,14 @@ void Motion::fast_straight(uint8_t straight_count)
 
     control->flag = FALSE; // 制御OFF
 
+    map->thinking_flag = TRUE;
+
     // std::cout << "stop" << std::endl;
 }
 
 void Motion::CheckMotorDuty(float Duty_l, float Duty_r, uint32_t time)
 {
-    //control->flag = TRUE; // 制御ON
+    // control->flag = TRUE; // 制御ON
 
     control->Duty_l = Duty_l;
     control->Duty_r = Duty_r;
@@ -1274,4 +1405,9 @@ void Motion::CheckMotorDuty(float Duty_l, float Duty_r, uint32_t time)
     }
 
     control->flag = FALSE; // 制御OFF
+}
+
+float Motion::CalcVelocity(float dist, float vel, float acc)
+{
+    return (vel + sqrt((vel * vel) + 2 * acc * dist)) / 2;
 }
