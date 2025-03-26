@@ -22,10 +22,8 @@ void Search::main_task() // Task Number 0
     map->flag = SEARCH;
     control->log_flag = TRUE;
     motion.InitMaze();
-    ESP_LOGI("Init", "Maze");
     map->search_count_flag = TRUE;
     map->search_time = 0;
-    ESP_LOGI("Main", "Search");
     motion.search_adachi(map->GOAL_X,map->GOAL_Y);
     control->log_flag = FALSE;
     map_write(map);
@@ -47,9 +45,9 @@ void All_Search::ref_by_motion(Adachi &_adachi) { motion = _adachi;}
 
 void All_Search::main_task() // Task Number 1
 {
-    //val->max.acc = 1.5;
-    //val->max.vel = 0.4;
-    //val->end.vel = 0.4;
+    val->max.acc = 4.0;
+    val->max.vel = 0.4;
+    val->end.vel = 0.4;
 
     val->current.rad = 0.0;
     val->sum.len = 0.0;
@@ -64,8 +62,6 @@ void All_Search::main_task() // Task Number 1
     motion.search_adachi2(map->GOAL_X,map->GOAL_Y);
     control->log_flag = FALSE;
     
-    //map->flag = ALL_SEARCH;
-    //motion.search_adachi(0,0);
     map_write(map);
     //std::cout << "All_Search" << std::endl;
 }
