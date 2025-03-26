@@ -28,6 +28,8 @@ typedef enum
     RIGHT = 1,
     REAR = 2,
     LEFT = 3,
+    SLA_LEFT = 4,
+    SLA_RIGHT = 5,
     UNDEFINED,
 }t_local_dir;
 
@@ -144,6 +146,9 @@ typedef struct
     t_motion tar;   //target
     t_motion sum;   //sum
     t_motion I;    //integral
+    t_motion sla;  //slalom
+    t_motion fast_ref; // 最短走行時基準速
+    t_motion fast_high; // 既地区間加速時速
 }t_mouse_motion_val;    //motion value
 
 typedef struct 
@@ -223,13 +228,14 @@ typedef struct
 typedef struct 
 {
     t_pos pos;
-    t_wall wall[32][32];
-    unsigned char size[32][32] = {0};
+    t_wall wall[16][16];
+    unsigned char size[16][16] = {0};
     uint8_t GOAL_X = 0;
     uint8_t GOAL_Y = 0;
     t_search_mode flag;
     t_bool search_count_flag = FALSE;
     uint64_t search_time = 0;
+    t_bool thinking_flag = FALSE;
 }t_map;     //map data
 
 typedef struct
