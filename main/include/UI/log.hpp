@@ -45,6 +45,7 @@ class Log1 : public UI
         void ref_by_motion(Adachi &_adachi) override;
         void log_print();
         void map_print();
+        void map_output_txt();
     private:
         t_sens_data *sens;    
         t_mouse_motion_val *val;
