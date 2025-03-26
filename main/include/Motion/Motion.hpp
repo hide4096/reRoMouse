@@ -41,7 +41,9 @@ class Motion : public Micromouse
         void offset2();
         void calibrate_wall_th();
         void fast_straight(uint8_t straight_count);
+        void fast_stop(uint8_t straight_count);
         void CheckMotorDuty(float duty_l, float duty_r, uint32_t time);
+        float CalcVelocity(float dis, float vel, float acc);
         
         
     protected:
