@@ -3,8 +3,8 @@
 static BUZZER::buzzer_score_t pc98[] = {{2000, 100}, {1000, 100}};
 static BUZZER::buzzer_score_t pc98_2[] = {{1000, 100}, {2000, 100}};
 
-#define MAZESIZE_X 16 // 迷路の大きさ(x方向)
-#define MAZESIZE_Y 16 // 迷路の大きさ(y方向)
+#define MAZESIZE_X 19 // 迷路の大きさ(x方向)
+#define MAZESIZE_Y 19 // 迷路の大きさ(y方向)
 #define MASK_SEARCH 0x01
 #define MASK_SECOND 0x03
 #define CONV_SEN2WALL(w) ((w) ? WALL : NOWALL)

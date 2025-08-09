@@ -1,7 +1,7 @@
 #include "files.hpp"
 
-#define MAZESIZE_X 16
-#define MAZESIZE_Y 16
+#define MAZESIZE_X 19
+#define MAZESIZE_Y 19
 
 const char *PID_FILE_TAG = "file_pid";
 const char *WALL_TH_FILE_TAG = "file_wall_th";

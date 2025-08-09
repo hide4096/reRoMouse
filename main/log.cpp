@@ -1,7 +1,7 @@
 #include "include/UI/log.hpp"
 
-#define MAZESIZE_X 16
-#define MAZESIZE_Y 16
+#define MAZESIZE_X 19
+#define MAZESIZE_Y 19
 
 void Log::ptr_by_sensor(t_sens_data *_sens) { sens = _sens; }
 

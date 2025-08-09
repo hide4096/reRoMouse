@@ -228,8 +228,8 @@ typedef struct
 typedef struct 
 {
     t_pos pos;
-    t_wall wall[16][16];
-    unsigned char size[16][16] = {0};
+    t_wall wall[19][19];
+    unsigned char size[19][19] = {0};
     uint8_t GOAL_X = 0;
     uint8_t GOAL_Y = 0;
     t_search_mode flag;
