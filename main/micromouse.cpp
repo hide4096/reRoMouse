@@ -154,10 +154,10 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //sens.wall.th_control.r = wall_threshold.th_control_r;
     //sens.wall.ref.l = wall_threshold.ref_l;
     //sens.wall.ref.r = wall_threshold.ref_r;
-    sens->wall.th_wall.fl = 2590;
-    sens->wall.th_wall.fr = 3170;
-    sens->wall.th_wall.l = 4520;
-    sens->wall.th_wall.r = 4630;
+    sens->wall.th_wall.fl = 3650;
+    sens->wall.th_wall.fr = 4160;
+    sens->wall.th_wall.l = 4950;
+    sens->wall.th_wall.r = 4130;
     sens->wall.th_control.l = 9050; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
     sens->wall.th_control.r = 9250;
     sens->wall.ref.l = 11550; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
@@ -167,8 +167,8 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     // 3769
 
     // ゴール座標
-    map.GOAL_X = 9;
-    map.GOAL_Y = 9;
+    map.GOAL_X = 8;
+    map.GOAL_Y = 8;
 
     ADS7066 *adc = driver->adc.get();
 
@@ -283,6 +283,7 @@ void set_interface()
     ui.push_back(std::make_shared<Test7>()); // 12
     ui.push_back(std::make_shared<Log>()); // 13
     ui.push_back(std::make_shared<Log1>()); // 14
+    ui.push_back(std::make_shared<PerformanceTest>()); // 15 (Performance Test)
 
     //std::cout << "set_interface" << std::endl;
 }

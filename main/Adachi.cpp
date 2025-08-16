@@ -188,6 +188,9 @@ void Adachi::set_wall(int x, int y) // 壁情報を記録
 	map->wall[x][y].east = e_write;	 // 実際に壁情報を書き込み
 	map->wall[x][y].west = w_write;	 // 実際に壁情報を書き込み
 
+	// 壁情報が更新されたのでキャッシュを無効化
+	map_cache_valid = false;
+
 	if (y < MAZESIZE_Y - 1) // 範囲チェック
 	{
 		map->wall[x][y + 1].south = n_write; // 反対側から見た壁を書き込み
@@ -262,11 +265,23 @@ int Adachi::get_nextdir(int x, int y, int mask, t_direction *dir)
 {
 	// ゴール座標x,yに向かう場合、今どちらに行くべきかを判断する。
 	// 探索、最短の切り替えのためのmaskを指定、dirは方角を示す
+	
+	// キャッシュチェック
+	if (map_cache_valid && cached_goal_x == x && cached_goal_y == y && cached_mask == mask) {
+		// キャッシュヒット - make_mapを呼ばずに既存のsize mapを使用
+	} else {
+		// キャッシュミス - 新しい計算が必要
+		make_map_fast(x, y, mask); // 高速版を使用
+		
+		// キャッシュを更新
+		map_cache_valid = true;
+		cached_goal_x = x;
+		cached_goal_y = y;
+		cached_mask = mask;
+	}
+	
 	int little, priority, tmp_priority; // 最小の値を探すために使用する変数
-
-	make_map(x, y, mask); // 歩数Map生成
 	little = 255;		  // 最小歩数を255歩(mapがunsigned char型なので)に設定
-
 	priority = 0; // 優先度の初期値は0
 
 	// maskの意味はstatic_parameter.hを参照
@@ -1427,4 +1442,549 @@ void Adachi::InitMaze()
 				map->wall[x][y].north = WALL;
 		}
 	}
+	
+	// キャッシュを初期化
+	map_cache_valid = false;
+	cached_goal_x = -1;
+	cached_goal_y = -1;
+	cached_mask = -1;
+}
+
+// オリジナル版のmake_map関数（比較用）
+void Adachi::make_map_original(int x, int y, int mask)
+{
+	// 従来のBellman-Ford式実装
+	int i, j;
+	t_bool change_flag;
+
+	if (map->flag == SEARCH)
+	{
+		init_map(x, y);
+	}
+	else if (map->flag == ALL_SEARCH)
+	{
+		init_map_all(x, y);
+	}
+
+	do
+	{
+		change_flag = FALSE;
+		for (i = 0; i < MAZESIZE_X; i++)
+		{
+			for (j = 0; j < MAZESIZE_Y; j++)
+			{
+				if (map->size[i][j] == 255)
+				{
+					continue;
+				}
+
+				if (j < MAZESIZE_Y - 1)
+				{
+					if ((map->wall[i][j].north & mask) == NOWALL)
+					{
+						if (map->size[i][j + 1] == 255)
+						{
+							map->size[i][j + 1] = map->size[i][j] + 1;
+							change_flag = TRUE;
+						}
+					}
+				}
+
+				if (i < MAZESIZE_X - 1)
+				{
+					if ((map->wall[i][j].east & mask) == NOWALL)
+					{
+						if (map->size[i + 1][j] == 255)
+						{
+							map->size[i + 1][j] = map->size[i][j] + 1;
+							change_flag = TRUE;
+						}
+					}
+				}
+
+				if (j > 0)
+				{
+					if ((map->wall[i][j].south & mask) == NOWALL)
+					{
+						if (map->size[i][j - 1] == 255)
+						{
+							map->size[i][j - 1] = map->size[i][j] + 1;
+							change_flag = TRUE;
+						}
+					}
+				}
+
+				if (i > 0)
+				{
+					if ((map->wall[i][j].west & mask) == NOWALL)
+					{
+						if (map->size[i - 1][j] == 255)
+						{
+							map->size[i - 1][j] = map->size[i][j] + 1;
+							change_flag = TRUE;
+						}
+					}
+				}
+			}
+		}
+	} while (change_flag == TRUE);
+}
+
+// BFS版の高速make_map実装
+void Adachi::make_map_fast(int goal_x, int goal_y, int mask)
+{
+	static int debug_counter = 0;
+	debug_counter++;
+	bool debug_print = (debug_counter <= 3);  // 最初の3回だけデバッグ出力
+	
+	if (debug_print) {
+		printf("make_map_fast called (count: %d)\n", debug_counter);
+	}
+
+	// 初期化（元のinit_mapと同じロジック）
+	if (map->flag == SEARCH) {
+		// 通常の初期化：全て255、ゴールのみ0
+		for (int i = 0; i < MAZESIZE_X; i++) {
+			for (int j = 0; j < MAZESIZE_Y; j++) {
+				map->size[i][j] = 255;
+			}
+		}
+		map->size[goal_x][goal_y] = 0;
+	} else if (map->flag == ALL_SEARCH) {
+		// 全探索用初期化
+		bool all_filled = true;
+		for (int i = 0; i < MAZESIZE_X; i++) {
+			for (int j = 0; j < MAZESIZE_Y; j++) {
+				if (is_unknown(i, j) == true) {
+					map->size[i][j] = 0;
+					all_filled = false;
+				} else {
+					map->size[i][j] = 255;
+				}
+			}
+		}
+		if (all_filled == true) {
+			map->size[goal_x][goal_y] = 0;
+		}
+	}
+	
+	// BFSキューを使用した高速実装
+	struct Position {
+		int x, y, step;
+	};
+	
+	Position queue[MAZESIZE_X * MAZESIZE_Y];
+	int queue_front = 0, queue_rear = 0;
+	
+	// ゴール地点をキューに追加（既に値が0のものを探す）
+	for (int i = 0; i < MAZESIZE_X; i++) {
+		for (int j = 0; j < MAZESIZE_Y; j++) {
+			if (map->size[i][j] == 0) {
+				queue[queue_rear++] = {i, j, 0};
+			}
+		}
+	}
+	
+	int iterations = 0;
+	int max_iterations = MAZESIZE_X * MAZESIZE_Y * 2;  // 安全のための上限
+	
+	// BFS実行（4方向チェック）
+	while (queue_front < queue_rear && iterations < max_iterations) {
+		Position current = queue[queue_front++];
+		iterations++;
+		
+		// 北方向
+		if (current.y < MAZESIZE_Y - 1) {
+			if ((map->wall[current.x][current.y].north & mask) == NOWALL) {
+				int new_step = current.step + 1;
+				if (map->size[current.x][current.y + 1] == 255) {
+					map->size[current.x][current.y + 1] = new_step;
+					queue[queue_rear++] = {current.x, current.y + 1, new_step};
+				}
+			}
+		}
+		
+		// 東方向
+		if (current.x < MAZESIZE_X - 1) {
+			if ((map->wall[current.x][current.y].east & mask) == NOWALL) {
+				int new_step = current.step + 1;
+				if (map->size[current.x + 1][current.y] == 255) {
+					map->size[current.x + 1][current.y] = new_step;
+					queue[queue_rear++] = {current.x + 1, current.y, new_step};
+				}
+			}
+		}
+		
+		// 南方向
+		if (current.y > 0) {
+			if ((map->wall[current.x][current.y].south & mask) == NOWALL) {
+				int new_step = current.step + 1;
+				if (map->size[current.x][current.y - 1] == 255) {
+					map->size[current.x][current.y - 1] = new_step;
+					queue[queue_rear++] = {current.x, current.y - 1, new_step};
+				}
+			}
+		}
+		
+		// 西方向
+		if (current.x > 0) {
+			if ((map->wall[current.x][current.y].west & mask) == NOWALL) {
+				int new_step = current.step + 1;
+				if (map->size[current.x - 1][current.y] == 255) {
+					map->size[current.x - 1][current.y] = new_step;
+					queue[queue_rear++] = {current.x - 1, current.y, new_step};
+				}
+			}
+		}
+	}
+	
+	if (debug_print) {
+		printf("BFS iterations: %d, queue processed: %d\n", iterations, queue_front);
+		if (iterations >= max_iterations) {
+			printf("WARNING: BFS hit iteration limit!\n");
+		}
+	}
+}
+
+// オリジナル版のget_nextdir関数（比較用）
+int Adachi::get_nextdir_original(int x, int y, int mask, t_direction *dir)
+{
+	int little, priority, tmp_priority;
+
+	make_map_original(x, y, mask); // オリジナル版使用
+	little = 255;
+	priority = 0;
+
+	if ((map->wall[map->pos.x][map->pos.y].north & mask) == NOWALL)
+	{
+		tmp_priority = get_priority(map->pos.x, map->pos.y + 1, NORTH);
+		if (map->size[map->pos.x][map->pos.y + 1] < little)
+		{
+			little = map->size[map->pos.x][map->pos.y + 1];
+			*dir = NORTH;
+			priority = tmp_priority;
+		}
+		else if (map->size[map->pos.x][map->pos.y + 1] == little)
+		{
+			if (priority < tmp_priority)
+			{
+				*dir = NORTH;
+				priority = tmp_priority;
+			}
+		}
+	}
+
+	if ((map->wall[map->pos.x][map->pos.y].east & mask) == NOWALL)
+	{
+		tmp_priority = get_priority(map->pos.x + 1, map->pos.y, EAST);
+		if (map->size[map->pos.x + 1][map->pos.y] < little)
+		{
+			little = map->size[map->pos.x + 1][map->pos.y];
+			*dir = EAST;
+			priority = tmp_priority;
+		}
+		else if (map->size[map->pos.x + 1][map->pos.y] == little)
+		{
+			if (priority < tmp_priority)
+			{
+				*dir = EAST;
+				priority = tmp_priority;
+			}
+		}
+	}
+
+	if ((map->wall[map->pos.x][map->pos.y].south & mask) == NOWALL)
+	{
+		tmp_priority = get_priority(map->pos.x, map->pos.y - 1, SOUTH);
+		if (map->size[map->pos.x][map->pos.y - 1] < little)
+		{
+			little = map->size[map->pos.x][map->pos.y - 1];
+			*dir = SOUTH;
+			priority = tmp_priority;
+		}
+		else if (map->size[map->pos.x][map->pos.y - 1] == little)
+		{
+			if (priority < tmp_priority)
+			{
+				*dir = SOUTH;
+				priority = tmp_priority;
+			}
+		}
+	}
+
+	if ((map->wall[map->pos.x][map->pos.y].west & mask) == NOWALL)
+	{
+		tmp_priority = get_priority(map->pos.x - 1, map->pos.y, WEST);
+		if (map->size[map->pos.x - 1][map->pos.y] < little)
+		{
+			little = map->size[map->pos.x - 1][map->pos.y];
+			*dir = WEST;
+			priority = tmp_priority;
+		}
+		else if (map->size[map->pos.x - 1][map->pos.y] == little)
+		{
+			*dir = WEST;
+			priority = tmp_priority;
+		}
+	}
+
+	return ((int)((4 + *dir - map->pos.dir) % 4));
+}
+
+// パフォーマンステスト関数（改良版）
+void Adachi::benchmark_get_nextdir(int iterations)
+{
+	printf("=== get_nextdir Performance Benchmark (Improved) ===\n");
+	
+	// テスト用の迷路状態を設定
+	InitMaze();
+	map->pos.x = 0;
+	map->pos.y = 0;
+	map->pos.dir = NORTH;
+	map->flag = SEARCH;
+	
+	// いくつかの壁をランダムに設定（テスト用）
+	for (int i = 0; i < 5; i++) {
+		for (int j = 0; j < 5; j++) {
+			if ((i + j) % 3 == 0) {
+				map->wall[i][j].east = WALL;
+				if (i < MAZESIZE_X - 1) {
+					map->wall[i + 1][j].west = WALL;
+				}
+			}
+			if ((i + j) % 4 == 0) {
+				map->wall[i][j].north = WALL;
+				if (j < MAZESIZE_Y - 1) {
+					map->wall[i][j + 1].south = WALL;
+				}
+			}
+		}
+	}
+	
+	t_direction dir_old, dir_new;
+	int64_t start_time, end_time;
+	
+	printf("Testing with %d iterations (pure computation time)...\n", iterations);
+	
+	// === オリジナル版のテスト（printf削除版） ===
+	start_time = esp_timer_get_time();
+	
+	for (int i = 0; i < iterations; i++) {
+		// 純粋な計算のみ測定
+		get_nextdir_original(8, 8, MASK_SEARCH, &dir_old);
+		// 位置を少しずつ変えて実際の探索に近い状況をシミュレート
+		map->pos.x = (map->pos.x + 1) % 5;
+		map->pos.y = (map->pos.y + (i % 3)) % 5;
+	}
+	
+	end_time = esp_timer_get_time();
+	int64_t original_time = end_time - start_time;
+	
+	// === 最適化版のテスト（キャッシュ無し） ===
+	map_cache_valid = false;
+	map->pos.x = 0;
+	map->pos.y = 0;
+	
+	start_time = esp_timer_get_time();
+	
+	for (int i = 0; i < iterations; i++) {
+		map_cache_valid = false; // キャッシュを無効化して毎回計算
+		get_nextdir(8, 8, MASK_SEARCH, &dir_new);
+		map->pos.x = (map->pos.x + 1) % 5;
+		map->pos.y = (map->pos.y + (i % 3)) % 5;
+	}
+	
+	end_time = esp_timer_get_time();
+	int64_t optimized_time = end_time - start_time;
+	
+	// === キャッシュ効果のテスト（同一パラメータ） ===
+	map_cache_valid = false;
+	map->pos.x = 0;
+	map->pos.y = 0;
+	
+	start_time = esp_timer_get_time();
+	
+	for (int i = 0; i < iterations; i++) {
+		get_nextdir(8, 8, MASK_SEARCH, &dir_new); // 同じゴールで連続実行
+		// 位置は変えない（キャッシュ効果を確認）
+	}
+	
+	end_time = esp_timer_get_time();
+	int64_t cached_time = end_time - start_time;
+	
+	// === より詳細なテスト：make_map単体 ===
+	printf("\n--- Detailed Algorithm Comparison ---\n");
+	
+	// make_map_original単体
+	start_time = esp_timer_get_time();
+	for (int i = 0; i < 10; i++) {
+		make_map_original(8, 8, MASK_SEARCH);
+	}
+	end_time = esp_timer_get_time();
+	int64_t make_map_orig_time = end_time - start_time;
+	
+	// make_map_fast単体
+	start_time = esp_timer_get_time();
+	for (int i = 0; i < 10; i++) {
+		make_map_fast(8, 8, MASK_SEARCH);
+	}
+	end_time = esp_timer_get_time();
+	int64_t make_map_fast_time = end_time - start_time;
+	
+	// === 結果出力（計算完了後に一括出力） ===
+	printf("\n=== Results ===\n");
+	printf("Original (total): %lld us, avg: %.2f us\n", 
+		   original_time, (float)original_time / iterations);
+	printf("Optimized (total): %lld us, avg: %.2f us\n", 
+		   optimized_time, (float)optimized_time / iterations);
+	printf("Cached (total): %lld us, avg: %.2f us\n", 
+		   cached_time, (float)cached_time / iterations);
+	
+	printf("\n--- Algorithm Core Performance ---\n");
+	printf("make_map_original (10 calls): %lld us, avg: %.2f us\n", 
+		   make_map_orig_time, (float)make_map_orig_time / 10);
+	printf("make_map_fast (10 calls): %lld us, avg: %.2f us\n", 
+		   make_map_fast_time, (float)make_map_fast_time / 10);
+	
+	// 改善率計算
+	if (original_time > 0) {
+		float improvement_no_cache = ((float)(original_time - optimized_time) / original_time) * 100;
+		float improvement_with_cache = ((float)(original_time - cached_time) / original_time) * 100;
+		float algorithm_improvement = ((float)(make_map_orig_time - make_map_fast_time) / make_map_orig_time) * 100;
+		
+		printf("\n=== Performance Improvements ===\n");
+		printf("Full function improvement (no cache): %.1f%%\n", improvement_no_cache);
+		printf("Full function improvement (with cache): %.1f%%\n", improvement_with_cache);
+		printf("Core algorithm improvement: %.1f%%\n", algorithm_improvement);
+		printf("Speedup factor (algorithm): %.2fx\n", (float)make_map_orig_time / make_map_fast_time);
+	}
+	
+	// 1ms目標チェック
+	float avg_original_ms = (float)original_time / iterations / 1000.0;
+	float avg_optimized_ms = (float)optimized_time / iterations / 1000.0;
+	float avg_cached_ms = (float)cached_time / iterations / 1000.0;
+	
+	printf("\n=== Target Achievement (1ms goal) ===\n");
+	printf("Original: %.3f ms %s\n", avg_original_ms, 
+		   (avg_original_ms <= 1.0) ? "(PASS)" : "(FAIL)");
+	printf("Optimized: %.3f ms %s\n", avg_optimized_ms, 
+		   (avg_optimized_ms <= 1.0) ? "(PASS)" : "(FAIL)");
+	printf("Cached: %.3f ms %s\n", avg_cached_ms, 
+		   (avg_cached_ms <= 1.0) ? "(PASS)" : "(FAIL)");
+}
+
+void Adachi::performance_test()
+{
+	printf("Starting Adachi Algorithm Performance Test...\n");
+	
+	// まず軽量テストで問題を切り分け
+	printf("\n=== Lightweight Core Algorithm Test ===\n");
+	
+	InitMaze();
+	map->pos.x = 5;
+	map->pos.y = 5;
+	map->pos.dir = NORTH;
+	map->flag = SEARCH;
+	
+	// 単純な迷路環境を設定
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			map->wall[i][j].north = NOWALL;
+			map->wall[i][j].east = NOWALL;
+			map->wall[i][j].south = NOWALL;
+			map->wall[i][j].west = NOWALL;
+		}
+	}
+	
+	int64_t start_time, end_time;
+	t_direction dir;
+	
+	// === make_map関数単体の比較（最も重要） ===
+	printf("Testing make_map functions (10 iterations each)...\n");
+	
+	// Original make_map
+	start_time = esp_timer_get_time();
+	for (int i = 0; i < 10; i++) {
+		make_map_original(15, 15, MASK_SEARCH);
+	}
+	end_time = esp_timer_get_time();
+	int64_t orig_make_map_time = end_time - start_time;
+	
+	// Fast make_map
+	start_time = esp_timer_get_time();
+	for (int i = 0; i < 10; i++) {
+		make_map_fast(15, 15, MASK_SEARCH);
+	}
+	end_time = esp_timer_get_time();
+	int64_t fast_make_map_time = end_time - start_time;
+	
+	printf("Original make_map: %lld us (avg: %.1f us)\n", 
+		   orig_make_map_time, (float)orig_make_map_time / 10);
+	printf("Fast make_map: %lld us (avg: %.1f us)\n", 
+		   fast_make_map_time, (float)fast_make_map_time / 10);
+	
+	if (orig_make_map_time > 0) {
+		float improvement = ((float)(orig_make_map_time - fast_make_map_time) / orig_make_map_time) * 100;
+		printf("Make_map improvement: %.1f%% (%.2fx faster)\n", 
+			   improvement, (float)orig_make_map_time / fast_make_map_time);
+	}
+	
+	// === キャッシュ効果の詳細テスト ===
+	printf("\n=== Cache Effect Test ===\n");
+	
+	// キャッシュをクリア
+	map_cache_valid = false;
+	printf("Cache cleared\n");
+	
+	// 1回目（キャッシュミス）
+	start_time = esp_timer_get_time();
+	get_nextdir(15, 15, MASK_SEARCH, &dir);
+	end_time = esp_timer_get_time();
+	int64_t first_call = end_time - start_time;
+	printf("First call (cache miss): %lld us\n", first_call);
+	
+	// 2回目（キャッシュヒット期待）
+	start_time = esp_timer_get_time();
+	get_nextdir(15, 15, MASK_SEARCH, &dir);
+	end_time = esp_timer_get_time();
+	int64_t second_call = end_time - start_time;
+	printf("Second call (cache hit): %lld us\n", second_call);
+	
+	// 3回目（確実にキャッシュヒット）
+	start_time = esp_timer_get_time();
+	get_nextdir(15, 15, MASK_SEARCH, &dir);
+	end_time = esp_timer_get_time();
+	int64_t third_call = end_time - start_time;
+	printf("Third call (cache hit): %lld us\n", third_call);
+	
+	float cache_improvement = (float)first_call / second_call;
+	printf("Cache effectiveness: %.2fx faster\n", cache_improvement);
+	
+	if (cache_improvement > 1.5) {
+		printf("✓ Cache is working effectively\n");
+	} else {
+		printf("⚠ Cache effect is minimal\n");
+	}
+	
+	// === 問題診断 ===
+	printf("\n=== Problem Diagnosis ===\n");
+	
+	if (orig_make_map_time == fast_make_map_time) {
+		printf("WARNING: No difference in make_map performance!\n");
+		printf("Possible causes:\n");
+		printf("1. Compiler optimization removed differences\n");
+		printf("2. Timer resolution too low\n");
+		printf("3. Algorithm not actually different\n");
+	}
+	
+	if (first_call == second_call) {
+		printf("WARNING: No cache effect detected!\n");
+		printf("Cache mechanism may not be working\n");
+	}
+	
+	// より大きなテストも実行
+	printf("\n=== Extended Test ===\n");
+	benchmark_get_nextdir(50);  // 反復回数を減らして詳細を確認
+	
+	printf("Performance test completed.\n");
 }

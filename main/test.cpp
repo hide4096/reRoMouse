@@ -196,3 +196,35 @@ void Test7::main_task() // Task Number 12
     control->log_flag = FALSE;
     std::cout << "Test3" << std::endl;
 }
+
+void PerformanceTest::ptr_by_sensor(t_sens_data *_sens) { sens = _sens; }
+
+void PerformanceTest::ptr_by_motion(t_mouse_motion_val *_val) { val = _val; }
+
+void PerformanceTest::ptr_by_control(t_control *_control) { control = _control; }
+
+void PerformanceTest::ptr_by_map(t_map *_map) { map = _map; }
+
+void PerformanceTest::set_device_driver(std::shared_ptr<t_drivers> driver) {}
+
+void PerformanceTest::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
+
+void PerformanceTest::main_task() // Task Number 14 (Performance Test)
+{
+    printf("=== Starting Performance Test ===\n");
+    
+    // 迷路の初期化
+    motion.InitMaze();
+    map->pos.x = 0;
+    map->pos.y = 0;
+    map->pos.dir = NORTH;
+    map->flag = SEARCH;
+    
+    printf("Maze initialized. Starting benchmark...\n");
+    
+    // パフォーマンステストを実行
+    motion.performance_test();
+    
+    printf("=== Performance Test Completed ===\n");
+    std::cout << "PerformanceTest" << std::endl;
+}

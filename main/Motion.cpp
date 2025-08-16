@@ -6,7 +6,7 @@
 #define SECTION_HALF 0.045
 #define TURN_HALF M_PI
 #define TURN_QUARTER M_PI / 2.0
-#define OFFSET_DISTANCE 0.013
+#define OFFSET_DISTANCE 0.011
 #define FRONT_WALL_LIMIT_FL 25100
 #define FRONT_WALL_LIMIT_FR 14600
 #define DONE 1
@@ -152,14 +152,14 @@ void Motion::run2()
         if (sens->wall.exist.l == FALSE && l_wall_check == TRUE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98, 2);
-            val->current.len = 0.055;
+            val->current.len = 0.057;
             hosei_flag = TRUE;
         }
 
         if (sens->wall.exist.r == FALSE && r_wall_check == TRUE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98, 2);
-            val->current.len = 0.055;
+            val->current.len = 0.057;
             hosei_flag = TRUE;
         }
 
@@ -167,14 +167,14 @@ void Motion::run2()
         if (sens->wall.exist.l == TRUE && l_wall_check == FALSE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98_2, 2);
-            val->current.len = 0.038; // 補正後の距離を伸ばしたい場合は、値を小さく
+            val->current.len = 0.035; // 補正後の距離を伸ばしたい場合は、値を小さく
             hosei_flag = TRUE;
         }
 
         if (sens->wall.exist.r == TRUE && r_wall_check == FALSE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98_2, 2);
-            val->current.len = 0.040;
+            val->current.len = 0.033;
             hosei_flag = TRUE;
         }
 
@@ -575,7 +575,7 @@ void Motion::back()
     val->tar.ang_vel = 0.0;
     val->tar.ang_acc = 0.0;
 
-    val->tar.len = -OFFSET_DISTANCE - 0.004;
+    val->tar.len = -OFFSET_DISTANCE - 0.006;
     val->current.len = 0.0;
     val->tar.acc = -(0.4);
     // val->tar.vel = 0.0;
