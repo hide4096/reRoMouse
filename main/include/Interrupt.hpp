@@ -37,6 +37,7 @@ class Interrupt : public Micromouse{
         void calc_distance();
         void calc_angle();
         float calc_target_accel();
+        void estimate_velocity_fusion();  // エンコーダ+IMU融合速度推定
         t_sens_data *sens;
         t_mouse_motion_val *val;
         t_control *control;

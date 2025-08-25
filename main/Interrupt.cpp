@@ -318,27 +318,48 @@ void Interrupt::calc_distance()
     val->l.vel = len_L / 0.001; // 1ms
     val->r.vel = len_R / 0.001;
 
+    // 高精度速度推定システム（エンコーダ+IMU融合）
+    estimate_velocity_fusion();
+
     // std::cout << "val->l.vel : " << val->l.vel * 1000.0 << std::endl;
     // std::cout << "val->r.vel : " << val->r.vel *1 000.0 << std::endl;
 
-    if (!imu->in_survaeybias)
-    { // サーベイバイアス中は加速度を計算しない
-        val->current.acc = (imu->accelY() * 9.80665) * 0.001;
-    }
-
-    float _vel = (val->l.vel + val->r.vel) / 2.0;
-
-    //val->current.vel = _vel;
-    val->current.vel = val->current.alpha * (val->current.vel + val->current.acc) + (1.0 - val->current.alpha) * _vel;
     val->current.len += val->current.vel * 0.001;
-    // std::cout << "val->current.vel : " << val->current.vel << std::endl;
     val->sum.len += val->current.vel * 0.001;
-
     val->I.vel += val->current.vel; // 積分値更新
 
-    
-
     // std::cout << "calc_dist" << std::endl;
+    return;
+}
+
+void Interrupt::estimate_velocity_fusion()
+{ // エンコーダ+IMU融合による高精度速度推定システム
+    
+    // エンコーダベース速度（既存計算）
+    float encoder_vel = (val->l.vel + val->r.vel) / 2.0;
+    
+    // IMU加速度データ取得と処理
+    float imu_accel = 0.0;
+    if (!imu->in_survaeybias) 
+    { // サーベイバイアス中は加速度を計算しない
+        imu_accel = (imu->accelY() * 9.80665) * 0.001; // m/s^2 から m/ms に変換
+        val->current.acc = imu_accel;
+    }
+    
+    // センサフュージョン：相補フィルタによる速度推定
+    // alpha値により重み付けを調整（エンコーダとIMUのバランス）
+    float predicted_vel = val->current.vel + val->current.acc; // IMUによる予測速度
+    val->current.vel = val->current.alpha * predicted_vel + (1.0 - val->current.alpha) * encoder_vel;
+    
+    // 追加のノイズフィルタリング（移動平均的な処理）
+    static float vel_buffer[3] = {0.0, 0.0, 0.0};
+    vel_buffer[2] = vel_buffer[1];
+    vel_buffer[1] = vel_buffer[0];
+    vel_buffer[0] = val->current.vel;
+    
+    // 3点移動平均による平滑化（ノイズ除去）
+    val->current.vel = (vel_buffer[0] + vel_buffer[1] + vel_buffer[2]) / 3.0;
+    
     return;
 }
 
