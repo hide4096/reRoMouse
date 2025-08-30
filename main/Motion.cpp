@@ -1389,7 +1389,7 @@ void Motion::fast_stop(uint8_t straight_count)
 
 void Motion::CheckMotorDuty(float Duty_l, float Duty_r, uint32_t time)
 {
-    // control->flag = TRUE; // 制御ON
+    control->flag = FALSE; // 制御ON
 
     control->Duty_l = Duty_l;
     control->Duty_r = Duty_r;
@@ -1410,4 +1410,53 @@ void Motion::CheckMotorDuty(float Duty_l, float Duty_r, uint32_t time)
 float Motion::CalcVelocity(float dist, float vel, float acc)
 {
     return (vel + sqrt((vel * vel) + 2 * acc * dist)) / 2;
+}
+
+void Motion::DetectDeadZone(float step_size, float max_duty, uint32_t update_rate, uint32_t settle_time)
+{
+    control->flag = FALSE; // 制御OFF（手動モータ制御）
+    control->test_flag = TRUE;
+    
+    float current_duty = 0.0;
+
+    vTaskDelay(settle_time / portTICK_PERIOD_MS);
+
+    while (current_duty <= max_duty) {
+        control->Duty_l = current_duty;
+        control->Duty_r = current_duty;
+        // モーターに指令値を出力
+        mot->setMotorSpeed(current_duty, current_duty);
+
+        current_duty += step_size;
+        vTaskDelay(update_rate / portTICK_PERIOD_MS); // 1秒待機
+    }
+    
+    mot->setMotorSpeed(0.0, 0.0); // 最終的にモーター停止
+    control->flag = FALSE; // 制御OFF維持
+    control->test_flag = FALSE;
+}
+
+void Motion::DetectSaturationRegion(float start_duty, float step_size, float max_duty, uint32_t update_rate, uint32_t settle_time)
+{
+    control->flag = FALSE; // 制御OFF（手動モータ制御）
+    control->test_flag = TRUE;
+    
+    float current_duty = start_duty;
+    
+    vTaskDelay(settle_time / portTICK_PERIOD_MS);
+
+    while (current_duty <= max_duty) {
+        control->Duty_l = current_duty;
+        control->Duty_r = current_duty;
+        // モーターに指令値を出力
+        mot->setMotorSpeed(current_duty, current_duty);
+
+        current_duty += step_size;
+        vTaskDelay(update_rate / portTICK_PERIOD_MS); // 1秒待機
+    }
+    
+    
+    mot->setMotorSpeed(0.0, 0.0); // 最終的にモーター停止
+    control->flag = FALSE; // 制御OFF維持
+    control->test_flag = FALSE;
 }

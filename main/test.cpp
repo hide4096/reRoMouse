@@ -17,7 +17,11 @@ void Test::main_task() // Task Number 6
     control->log_flag = TRUE;
     //motion.check_enkaigei(); // ok
     //motion.CheckMotorDuty(0.1, 0.1, 5000); // ok
-    motion.back();
+    
+    // 不感帯検出テスト
+    motion.DetectDeadZone(0.005, 0.30, 10, 500);
+    
+    //motion.back();
     control->log_flag = FALSE;
     std::cout << "Test" << std::endl;
 }
@@ -37,6 +41,11 @@ void Test2::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 void Test2::main_task() // Task Number 7
 {
     control->log_flag = TRUE;
+    
+    // 飽和領域検出テスト
+    motion.DetectSaturationRegion(0.1, 0.05, 0.8, 1, 500);
+    
+    /*
     val->sum.len = 0.0;
     motion.offset2(); // 14mm
     motion.run_half(); // 45mm
@@ -56,6 +65,7 @@ void Test2::main_task() // Task Number 7
     //motion.run();  // 14
     motion.stop(); // 45mm
     motion.turn_half();
+    */
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
 }

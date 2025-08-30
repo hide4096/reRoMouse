@@ -179,7 +179,7 @@ void Interrupt::wall_control() //  壁制御
 
 void Interrupt::feedback_control()
 { // フィードバック制御
-    if (control->flag == TRUE)
+    if (control->flag == TRUE && control->test_flag == FALSE)
     {
         control->V_l = 0;
         control->V_r = 0;
@@ -254,26 +254,15 @@ void Interrupt::feedback_control()
 
         mot->setMotorSpeed(control->Duty_r, control->Duty_l);
     }
-    else
+    else if (control->flag == FALSE && control->test_flag == FALSE)
     {
         mot->setMotorSpeed(0.0, 0.0);
     }
-    if (control->test_flag == TRUE)
+    else if (control->flag == FALSE && control->test_flag == TRUE)
     {
-        // mot->setMotorSpeed(control->test_Duty_r,control->test_Duty_l);
-        //  速度制御
-        val->current.vel_error = val->tar.vel - val->current.vel;
-        val->I.vel_error += val->current.vel_error / 1000.0;
-        val->p.vel_error = (val->p.vel - val->current.vel) * 1000.0;
-
-        control->V_l = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
-        control->V_r = val->current.vel_error * (control->v.Kp) + val->I.vel_error * (control->v.Ki) - val->p.vel_error * (control->v.Kd);
-
-        control->Duty_l = control->V_l / sens->BatteryVoltage; // zero division error に注意
-        control->Duty_r = control->V_r / sens->BatteryVoltage;
-
-        mot->setMotorSpeed(control->Duty_r, control->Duty_l);
+        // mot->setMotorSpeed(0.0, 0.0); // テスト、実験時は無効にしておかないといけない
     }
+    
     val->p.vel = val->current.vel;
     val->p.ang_vel = val->current.ang_vel;
 
@@ -447,14 +436,6 @@ void Interrupt::logging()
         adcs[23] = (int16_t)(val->current.len * 1000);
         adcs[24] = (int16_t)(val->tar.len * 1000);
         adcs[25] = delta_time;
-        /*adcs[26] = arr[0];
-        adcs[27] = arr[1];
-        adcs[28] = arr[2];
-        adcs[29] = arr[3];
-        adcs[30] = arr2[0];
-        adcs[31] = arr2[1];
-        adcs[32] = arr2[2];
-        adcs[33] = arr2[3];*/
         adcs[26] = map->thinking_flag;
         err = esp_partition_write(partition, mem_offset, adcs, sizeof(adcs));
         if (err != ESP_OK)

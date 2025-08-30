@@ -44,6 +44,8 @@ class Motion : public Micromouse
         void fast_stop(uint8_t straight_count);
         void CheckMotorDuty(float duty_l, float duty_r, uint32_t time);
         float CalcVelocity(float dis, float vel, float acc);
+        void DetectDeadZone(float step_size = 0.001, float max_duty = 0.1, uint32_t update_rate = 1, uint32_t settle_time = 1000);
+        void DetectSaturationRegion(float start_duty = 0.1, float step_size = 0.05, float max_duty = 0.8, uint32_t update_rate = 1, uint32_t settle_time = 2000);
         
         
     protected:
