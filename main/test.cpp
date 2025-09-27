@@ -19,7 +19,7 @@ void Test::main_task() // Task Number 6
     //motion.CheckMotorDuty(0.1, 0.1, 5000); // ok
     
     // 不感帯検出テスト
-    motion.DetectDeadZone(0.005, 0.30, 10, 500);
+    motion.DetectDeadZone(0.005, 0.30, 10, 500); // 0.0 ~ 0.30 まで0.005刻みで10msごとにデューティ更新
     
     //motion.back();
     control->log_flag = FALSE;
@@ -43,7 +43,7 @@ void Test2::main_task() // Task Number 7
     control->log_flag = TRUE;
     
     // 飽和領域検出テスト
-    motion.DetectSaturationRegion(0.1, 0.05, 0.8, 1, 500);
+    motion.DetectSaturationRegion(0.1, 0.05, 0.8, 1, 500); // 0.1 ~ 0.80 まで0.05刻みで1msごとにデューティ更新
     
     /*
     val->sum.len = 0.0;
