@@ -3,3 +3,7 @@ build
 .vscode/c_cpp_properties.json
 /Report
 CLAUDE.md
+.mcp.json
+.cache
+.claude
+.serena
