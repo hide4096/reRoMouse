@@ -7,3 +7,7 @@ CLAUDE.md
 .cache
 .claude
 .serena
+/Mcode/README_MATLAB_Logger.md
+/Mcode/robot_system_identification_input.asv
+/Mcode/emergency_save*
+/Mcode/temp_save*
