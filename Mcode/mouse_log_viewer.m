@@ -1,23 +1,33 @@
 function mouse_log_viewer()
     % マイクロマウスのログデータをリアルタイムでグラフ表示するMATLABスクリプト
     % log_print関数から出力されるCSVデータを解析してグラフ化
-    
+
     % シリアルポートの設定
     port = input('シリアルポート名を入力してください (例: COM3): ', 's');
     baudrate = 115200; % ESP32の標準ボーレート
-    
+
+    % グローバル変数でデータとシリアルポートを保護
+    global g_data_buffer g_serial_port g_sample_count;
+    g_data_buffer = [];
+    g_serial_port = [];
+    g_sample_count = 0;
+
     try
         % シリアルポート接続
         s = serialport(port, baudrate);
         configureTerminator(s, "LF"); % 改行文字で区切り
-        
+        g_serial_port = s; % グローバル変数に保存
+
+        % onCleanup関数でCtrl+C時の処理を確実に実行
+        cleanup_obj = onCleanup(@() cleanup_function());
+
         fprintf('シリアルポート %s に接続しました。\n', port);
         fprintf('ログデータの受信を開始します...\n');
         fprintf('終了するには Ctrl+C を押してください。\n\n');
-        
+
         % データ保存用変数の初期化
         data_buffer = [];
-        max_samples = 10000; % 最大サンプル数
+        max_samples = 50000; % 最大サンプル数
         
         % グラフウィンドウの設定
         figure('Name', 'マイクロマウスログビューア', 'Position', [100, 100, 1600, 1200]);
@@ -122,76 +132,59 @@ function mouse_log_viewer()
         
         % データ受信と描画のメインループ
         sample_count = 0;
-        
+        last_save_time = tic; % 定期保存用タイマー
+
         while true
-            try
-                % シリアルデータ読み取り
-                if s.NumBytesAvailable > 0
-                    line = readline(s);
-                    line = strip(line); % 前後の空白文字を削除
-                    
-                    % CSVデータを解析
-                    if ~isempty(line) && ~startsWith(line, 'E(') % エラーメッセージを除外
-                        data = parse_csv_line(line);
-                        
-                        if ~isempty(data) && length(data) >= 26
-                            sample_count = sample_count + 1;
-                            
-                            % データをバッファに追加
-                            data_buffer = [data_buffer; data];
-                            
-                            % バッファサイズ制限
-                            if size(data_buffer, 1) > max_samples
-                                data_buffer = data_buffer(end-max_samples+1:end, :);
-                            end
-                            
-                            % グラフ更新（100サンプルごと）
-                            if mod(sample_count, 100) == 0
-                                update_plots(data_buffer, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12);
-                                drawnow;
-                            end
-                            
-                            % リアルタイム表示（最新データ）
-                            if mod(sample_count, 10) == 0
-                                display_latest_data(data);
-                            end
+            % シリアルデータ読み取り
+            if s.NumBytesAvailable > 0
+                line = readline(s);
+                line = strip(line); % 前後の空白文字を削除
+
+                % CSVデータを解析
+                if ~isempty(line) && ~startsWith(line, 'E(') % エラーメッセージを除外
+                    data = parse_csv_line(line);
+
+                    if ~isempty(data) && length(data) >= 26
+                        sample_count = sample_count + 1;
+                        g_sample_count = sample_count; % グローバル変数に保存
+
+                        % データをバッファに追加
+                        data_buffer = [data_buffer; data];
+                        g_data_buffer = data_buffer; % グローバル変数に保存
+
+                        % バッファサイズ制限
+                        if size(data_buffer, 1) > max_samples
+                            data_buffer = data_buffer(end-max_samples+1:end, :);
+                            g_data_buffer = data_buffer;
+                        end
+
+                        % グラフ更新（1000サンプルごと）
+                        if mod(sample_count, 1000) == 0
+                            update_plots(data_buffer, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12);
+                            drawnow;
+                        end
+
+                        % リアルタイム表示（最新データ）
+                        if mod(sample_count, 10) == 0
+                            display_latest_data(data);
+                        end
+
+                        % 定期的なデータ保存（30秒ごと）
+                        if toc(last_save_time) > 30
+                            save_temp_data(data_buffer, sample_count);
+                            last_save_time = tic;
                         end
                     end
                 end
-                
-                pause(0.001); % CPU負荷軽減
-                
-            catch ME
-                if strcmp(ME.identifier, 'MATLAB:interruption')
-                    fprintf('\n\n受信を停止しました（ユーザー中断）。\n');
-                    break; % Ctrl+Cで中断
-                else
-                    fprintf('エラー: %s\n', ME.message);
-                end
             end
+
+            pause(0.001); % CPU負荷軽減
         end
-        
+
     catch ME
         fprintf('シリアルポート接続エラー: %s\n', ME.message);
         fprintf('利用可能なポートを確認してください。\n');
         return;
-    end
-    
-    % クリーンアップ
-    try
-        clear s;
-        fprintf('シリアルポートを正常に切断しました。\n');
-        fprintf('受信完了: 総サンプル数 %d個\n', sample_count);
-    catch
-        % 何もしない
-    end
-    
-    % データ保存オプション
-    if ~isempty(data_buffer)
-        save_data = questdlg('受信したデータを保存しますか？', '保存確認', 'はい', 'いいえ', 'いいえ');
-        if strcmp(save_data, 'はい')
-            save_log_data(data_buffer);
-        end
     end
 end
 
@@ -330,6 +323,13 @@ function update_plots(data_buffer, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11,
     ylabel('Duty比');
     legend({'左モータ', '右モータ'}, 'Location', 'best');
     grid on;
+
+    % デバッグ情報: duty値の範囲を表示
+    if ~isempty(duty_l) && ~isempty(duty_r)
+        text(length(sample_indices)*0.1, max([duty_l; duty_r])*0.9, ...
+             sprintf('L:[%.3f,%.3f] R:[%.3f,%.3f]', min(duty_l), max(duty_l), min(duty_r), max(duty_r)), ...
+             'Color', 'blue', 'FontSize', 8, 'FontWeight', 'bold');
+    end
     
     % エンコーダ値
     subplot(4, 3, 9);
@@ -382,20 +382,13 @@ function update_plots(data_buffer, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11,
              'Color', 'red', 'FontSize', 10, 'FontWeight', 'bold', ...
              'HorizontalAlignment', 'center');
     end
-    subplot(3, 3, 9);
-    plot(sample_indices, enc_l, 'r-', sample_indices, enc_r, 'g-', 'LineWidth', 1.5);
-    title('エンコーダ値');
-    xlabel('サンプル数');
-    ylabel('エンコーダ値');
-    legend({'左エンコーダ', '右エンコーダ'}, 'Location', 'best');
-    grid on;
 end
 
 function display_latest_data(data)
     % 最新データをコマンドウィンドウに表示
     if length(data) >= 26
-        fprintf('サンプル: 壁センサ[%4d,%4d,%4d,%4d] 速度[%.3f] 角速度[%.3f] バッテリ[%.2fV]\n', ...
-            data(1), data(2), data(3), data(4), data(6)/1000, data(9)/1000, data(5)/1000);
+        fprintf('サンプル: 壁センサ[%4d,%4d,%4d,%4d] 速度[%.3f] 角速度[%.3f] バッテリ[%.2fV] Duty[L:%.3f R:%.3f]\n', ...
+            data(1), data(2), data(3), data(4), data(6)/1000, data(9)/1000, data(5)/1000, data(20)/1000, data(21)/1000);
     end
 end
 
@@ -431,5 +424,89 @@ function save_log_data(data_buffer)
         
     catch ME
         fprintf('データ保存エラー: %s\n', ME.message);
+    end
+end
+
+function cleanup_function()
+    % Ctrl+C時の緊急クリーンアップ関数
+    global g_data_buffer g_serial_port g_sample_count;
+
+    fprintf('\n\n=== 緊急停止処理中 ===\n');
+
+    % シリアルポートのクリーンアップ
+    try
+        if ~isempty(g_serial_port)
+            clear g_serial_port;
+            fprintf('シリアルポートを切断しました。\n');
+        end
+    catch
+        % エラーは無視
+    end
+
+    % データの緊急保存
+    if ~isempty(g_data_buffer)
+        try
+            fprintf('受信データを緊急保存しています...\n');
+            timestamp = datestr(now, 'yyyymmdd_HHMMSS');
+
+            % MATファイル保存
+            mat_filename = sprintf('emergency_save_%s.mat', timestamp);
+            data_buffer = g_data_buffer;
+            save(mat_filename, 'data_buffer');
+
+            % CSVファイル保存
+            csv_filename = sprintf('emergency_save_%s.csv', timestamp);
+            save_csv_file(g_data_buffer, csv_filename);
+
+            fprintf('緊急保存完了:\n');
+            fprintf('  総サンプル数: %d個\n', g_sample_count);
+            fprintf('  保存ファイル: %s, %s\n', mat_filename, csv_filename);
+
+        catch ME
+            fprintf('緊急保存エラー: %s\n', ME.message);
+        end
+    else
+        fprintf('保存するデータがありません。\n');
+    end
+
+    fprintf('=== 緊急停止処理完了 ===\n');
+
+    % グローバル変数のクリア
+    clear global g_data_buffer g_serial_port g_sample_count;
+end
+
+function save_temp_data(data_buffer, sample_count)
+    % 定期的な一時保存
+    if ~isempty(data_buffer)
+        try
+            timestamp = datestr(now, 'yyyymmdd_HHMMSS');
+            temp_filename = sprintf('temp_save_%s.mat', timestamp);
+            save(temp_filename, 'data_buffer');
+            fprintf('一時保存完了: %s (サンプル数: %d)\n', temp_filename, sample_count);
+        catch
+            % 一時保存エラーは無視
+        end
+    end
+end
+
+function save_csv_file(data_buffer, filename)
+    % CSVファイル保存のヘルパー関数
+    try
+        % ヘッダー作成
+        header = {'wall_fl', 'wall_l', 'wall_r', 'wall_fr', 'battery_mV', ...
+                  'vel_current_mm_s', 'vel_target_mm_s', 'sum_len_mm', ...
+                  'ang_vel_current_mrad_s', 'ang_vel_target_mrad_s', 'rad_current_mrad', ...
+                  'accel_target_mm_s2', 'ang_accel_target_mrad_s2', ...
+                  'vel_error_mm_s', 'vel_i_error_mm_s', 'vel_d_error_mm_s', ...
+                  'ang_error_mrad_s', 'ang_i_error_mrad_s', 'ang_d_error_mrad_s', ...
+                  'duty_l_1000', 'duty_r_1000', 'enc_l', 'enc_r', ...
+                  'len_current_mm', 'len_target_mm', 'delta_time', 'thinking_flag'};
+
+        % CSVテーブル作成と保存
+        T = array2table(data_buffer, 'VariableNames', header);
+        writetable(T, filename);
+    catch
+        % CSVエラーの場合、生データを保存
+        csvwrite(filename, data_buffer);
     end
 end
