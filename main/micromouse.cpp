@@ -283,7 +283,8 @@ void set_interface()
     ui.push_back(std::make_shared<Test7>()); // 12
     ui.push_back(std::make_shared<Log>()); // 13
     ui.push_back(std::make_shared<Log1>()); // 14
-    ui.push_back(std::make_shared<PerformanceTest>()); // 15 (Performance Test)
+    ui.push_back(std::make_shared<SystemIdentificationTest>()); // 15 (System Identification Test)
+    // ui.push_back(std::make_shared<PerformanceTest>()); // 16 (Performance Test) - 一時的にコメントアウト
 
     //std::cout << "set_interface" << std::endl;
 }

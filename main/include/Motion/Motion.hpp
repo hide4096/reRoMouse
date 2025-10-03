@@ -46,7 +46,12 @@ class Motion : public Micromouse
         float CalcVelocity(float dis, float vel, float acc);
         void DetectDeadZone(float step_size = 0.001, float max_duty = 0.1, uint32_t update_rate = 1, uint32_t settle_time = 1000);
         void DetectSaturationRegion(float start_duty = 0.1, float step_size = 0.05, float max_duty = 0.8, uint32_t update_rate = 1, uint32_t settle_time = 2000);
-        
+
+        // システム同定実験用の関数
+        void ApplySystemIdentificationSignal(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms);
+        void RunTranslationIdentification(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms);
+        void RunRotationIdentification(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms);
+
         
     protected:
         t_sens_data *sens;

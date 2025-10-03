@@ -1390,6 +1390,7 @@ void Motion::fast_stop(uint8_t straight_count)
 void Motion::CheckMotorDuty(float Duty_l, float Duty_r, uint32_t time)
 {
     control->flag = FALSE; // 制御ON
+    control->test_flag = TRUE;
 
     control->Duty_l = Duty_l;
     control->Duty_r = Duty_r;
@@ -1405,6 +1406,7 @@ void Motion::CheckMotorDuty(float Duty_l, float Duty_r, uint32_t time)
     }
 
     control->flag = FALSE; // 制御OFF
+    control->test_flag = FALSE;
 }
 
 float Motion::CalcVelocity(float dist, float vel, float acc)
@@ -1454,9 +1456,78 @@ void Motion::DetectSaturationRegion(float start_duty, float step_size, float max
         current_duty += step_size;
         vTaskDelay(update_rate / portTICK_PERIOD_MS); // 1秒待機
     }
-    
-    
+
+
     mot->setMotorSpeed(0.0, 0.0); // 最終的にモーター停止
     control->flag = FALSE; // 制御OFF維持
     control->test_flag = FALSE;
+}
+
+void Motion::ApplySystemIdentificationSignal(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms)
+{
+    control->flag = FALSE;
+    control->test_flag = TRUE;
+
+    static const float DUTY_L = 0.15;
+    static const float DUTY_R = 0.15;
+
+    val->tar.vel = 0.0;
+    val->tar.acc = 0.0;
+    val->tar.ang_vel = 0.0;
+    val->tar.ang_acc = 0.0;
+
+    printf("=== Starting M-sequence Signal Application ===\n");
+    printf("Number of samples: %d\n", num_samples);
+    printf("Sampling period: %d ms\n", sampling_period_ms);
+
+    for (int i = 0; i < num_samples; i++) {
+        float duty_left = signal_left[i];
+        float duty_right = signal_right[i];
+
+        // duty値を安全な範囲に制限 (-0.5 to 0.5)
+        if (duty_left > DUTY_L) duty_left = DUTY_L;
+        if (duty_left < -DUTY_L) duty_left = -DUTY_L;
+        if (duty_right > DUTY_R) duty_right = DUTY_R;
+        if (duty_right < -DUTY_R) duty_right = -DUTY_R;
+
+        control->Duty_l = duty_left;
+        control->Duty_r = duty_right;
+
+        mot->setMotorSpeed(duty_left, duty_right);
+
+        if (i % 10 == 0) {
+            //printf("Progress: %d/%d samples\n", i + 1, num_samples);
+        }
+
+        vTaskDelay(sampling_period_ms / portTICK_PERIOD_MS);
+    }
+
+    mot->setMotorSpeed(0.0, 0.0);
+    control->Duty_l = 0.0;
+    control->Duty_r = 0.0;
+
+    printf("M-sequence signal application completed.\n");
+
+    control->flag = FALSE;
+    control->test_flag = FALSE;
+}
+
+void Motion::RunTranslationIdentification(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms)
+{
+    printf("--- Starting Translation Model Identification ---\n");
+    printf("Robot will perform parallel wheel motion for system identification.\n");
+
+    ApplySystemIdentificationSignal(signal_left, signal_right, num_samples, sampling_period_ms);
+
+    printf("Translation model identification completed.\n");
+}
+
+void Motion::RunRotationIdentification(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms)
+{
+    printf("--- Starting Rotation Model Identification ---\n");
+    printf("Robot will perform differential wheel motion for system identification.\n");
+
+    ApplySystemIdentificationSignal(signal_left, signal_right, num_samples, sampling_period_ms);
+
+    printf("Rotation model identification completed.\n");
 }
