@@ -18,18 +18,19 @@ from typing import List, Tuple, Optional
 class SignalArrayGenerator:
     """M系列信号配列生成クラス"""
 
-    # サイズプリセット
+    # サイズプリセット（基本サイズのみ、フルサイズは動的に決定）
     SIZE_PRESETS = {
         'tiny': 100,      # テスト用（0.1秒）
         'small': 1000,    # 短時間実験（1秒）
         'medium': 5000,   # 中程度実験（5秒）
         'large': 10000,   # 長時間実験（10秒）
-        'full': 40950     # フルスケール実験（40.95秒）
     }
 
     def __init__(self):
         self.translation_file = "Mcode/translation_input.txt"
         self.rotation_file = "Mcode/rotation_input.txt"
+        self.translation_full_size = None  # 並進データのフルサイズ
+        self.rotation_full_size = None     # 回転データのフルサイズ
 
     def read_signal_file(self, filename: str) -> Tuple[Optional[List[float]], Optional[List[float]]]:
         """CSVファイルから信号データを読み込む"""
@@ -90,19 +91,35 @@ class SignalArrayGenerator:
 
     def generate_header_file(self, trans_left: List[float], trans_right: List[float],
                            rot_left: List[float], rot_right: List[float],
-                           max_samples: int, output_file: str) -> None:
-        """ヘッダーファイルを生成"""
+                           max_samples_trans: int, max_samples_rot: int,
+                           output_file: str) -> None:
+        """ヘッダーファイルを生成
 
+        Args:
+            trans_left: 並進用左信号
+            trans_right: 並進用右信号
+            rot_left: 回転用左信号
+            rot_right: 回転用右信号
+            max_samples_trans: 並進データの最大サンプル数
+            max_samples_rot: 回転データの最大サンプル数
+            output_file: 出力ファイル名
+        """
+
+        # 並進と回転の最大値でメモリ使用量を計算
+        max_samples = max(max_samples_trans, max_samples_rot)
         memory_bytes, memory_kb = self.calculate_memory_usage(max_samples)
-        experiment_duration = max_samples * 0.001
+        experiment_duration_trans = max_samples_trans * 0.001
+        experiment_duration_rot = max_samples_rot * 0.001
 
         # ファイル名に基づく命名
         if 'embedded_signals' in output_file:
             namespace_name = "SystemIdentificationSignals"
-            array_suffix = f"{max_samples}"
+            array_suffix_trans = f"{max_samples_trans}"
+            array_suffix_rot = f"{max_samples_rot}"
         else:
             namespace_name = "FullSizeSignals"
-            array_suffix = f"{max_samples}"
+            array_suffix_trans = f"{max_samples_trans}"
+            array_suffix_rot = f"{max_samples_rot}"
 
         cpp_output = f"""// ESP32組み込み用M系列信号データ
 // MATLABのrobot_system_identification_input.mで生成されたデータから抽出
@@ -118,15 +135,17 @@ namespace {namespace_name} {{
 
         print("Generating C++ arrays...")
 
-        cpp_output += self.generate_cpp_array(trans_left, f"translation_signal_left_{array_suffix}", max_samples)
-        cpp_output += self.generate_cpp_array(trans_right, f"translation_signal_right_{array_suffix}", max_samples)
-        cpp_output += self.generate_cpp_array(rot_left, f"rotation_signal_left_{array_suffix}", max_samples)
-        cpp_output += self.generate_cpp_array(rot_right, f"rotation_signal_right_{array_suffix}", max_samples)
+        cpp_output += self.generate_cpp_array(trans_left, f"translation_signal_left_{array_suffix_trans}", max_samples_trans)
+        cpp_output += self.generate_cpp_array(trans_right, f"translation_signal_right_{array_suffix_trans}", max_samples_trans)
+        cpp_output += self.generate_cpp_array(rot_left, f"rotation_signal_left_{array_suffix_rot}", max_samples_rot)
+        cpp_output += self.generate_cpp_array(rot_right, f"rotation_signal_right_{array_suffix_rot}", max_samples_rot)
 
         cpp_output += f"""// サンプル数定数
-static constexpr int {"FULL_SCALE_SAMPLES" if max_samples <= 1000 else "FULLSIZE_SAMPLES"} = {max_samples};
+static constexpr int TRANSLATION_SAMPLES = {max_samples_trans};
+static constexpr int ROTATION_SAMPLES = {max_samples_rot};
 static constexpr int SAMPLING_PERIOD_MS = 1;  // 1ms
-static constexpr float EXPERIMENT_DURATION_SEC = {experiment_duration:.3f}f;  // seconds
+static constexpr float TRANSLATION_EXPERIMENT_DURATION_SEC = {experiment_duration_trans:.3f}f;  // seconds
+static constexpr float ROTATION_EXPERIMENT_DURATION_SEC = {experiment_duration_rot:.3f}f;  // seconds
 
 }} // namespace {namespace_name}
 
@@ -139,10 +158,20 @@ static constexpr float EXPERIMENT_DURATION_SEC = {experiment_duration:.3f}f;  //
 #include "../{os.path.basename(output_file)}"
 
 2. test.cppで使用:
+
+// 並進実験の場合:
 motion.RunTranslationIdentification(
-    {namespace_name}::translation_signal_left_{array_suffix},
-    {namespace_name}::translation_signal_right_{array_suffix},
-    {namespace_name}::{"FULL_SCALE_SAMPLES" if max_samples <= 1000 else "FULLSIZE_SAMPLES"},
+    {namespace_name}::translation_signal_left_{array_suffix_trans},
+    {namespace_name}::translation_signal_right_{array_suffix_trans},
+    {namespace_name}::TRANSLATION_SAMPLES,
+    {namespace_name}::SAMPLING_PERIOD_MS
+);
+
+// 回転実験の場合:
+motion.RunRotationIdentification(
+    {namespace_name}::rotation_signal_left_{array_suffix_rot},
+    {namespace_name}::rotation_signal_right_{array_suffix_rot},
+    {namespace_name}::ROTATION_SAMPLES,
     {namespace_name}::SAMPLING_PERIOD_MS
 );
 
@@ -169,9 +198,9 @@ CONFIG_SPIRAM_USE_MALLOC=y
         cpp_output += f"""
 === 仕様 ===
 配列数: 4個（translation_left/right, rotation_left/right）
-サンプル数: {max_samples}個
+並進サンプル数: {max_samples_trans}個 ({experiment_duration_trans:.2f}秒)
+回転サンプル数: {max_samples_rot}個 ({experiment_duration_rot:.2f}秒)
 メモリ使用量: {memory_kb:.1f} KB
-実験時間: {experiment_duration:.1f}秒
 
 === 安全性 ===
 - 最大duty比: ±0.3に制限
@@ -186,56 +215,107 @@ CONFIG_SPIRAM_USE_MALLOC=y
             f.write(cpp_output)
 
         print(f"\n✓ Generated {output_file}")
-        print(f"✓ Arrays contain {max_samples} samples each")
+        print(f"✓ Translation arrays: {max_samples_trans} samples ({experiment_duration_trans:.2f}秒)")
+        print(f"✓ Rotation arrays: {max_samples_rot} samples ({experiment_duration_rot:.2f}秒)")
         print(f"✓ Memory usage: {memory_kb:.1f} KB")
-        print(f"✓ Experiment duration: {experiment_duration:.1f} seconds")
 
-    def display_menu(self) -> None:
-        """メニューを表示"""
+    def display_menu(self, data_type: str = "both") -> None:
+        """メニューを表示
+
+        Args:
+            data_type: "translation", "rotation", "both"のいずれか
+        """
         print("=" * 60)
         print("ESP32用M系列信号配列生成ツール")
         print("=" * 60)
+
+        if data_type != "both":
+            print(f"\n[{data_type}データ用]")
+
         print("\n利用可能なサイズプリセット:")
 
-        for i, (name, samples) in enumerate(self.SIZE_PRESETS.items(), 1):
+        # 基本プリセットを表示
+        menu_items = list(self.SIZE_PRESETS.items())
+
+        # フルサイズプリセットを追加
+        if data_type == "translation" and self.translation_full_size:
+            menu_items.append(('full_trans', self.translation_full_size))
+        elif data_type == "rotation" and self.rotation_full_size:
+            menu_items.append(('full_rot', self.rotation_full_size))
+        elif data_type == "both":
+            if self.translation_full_size:
+                menu_items.append(('full_trans', self.translation_full_size))
+            if self.rotation_full_size:
+                menu_items.append(('full_rot', self.rotation_full_size))
+
+        for i, (name, samples) in enumerate(menu_items, 1):
             memory_bytes, memory_kb = self.calculate_memory_usage(samples)
             duration = samples * 0.001
 
-            print(f"{i}. {name:8} : {samples:5}サンプル ({memory_kb:6.1f}KB, {duration:5.1f}秒)")
+            display_name = name
+            if name == 'full_trans':
+                display_name = 'full_trans'
+                extra_info = f" (並進データフルサイズ)"
+            elif name == 'full_rot':
+                display_name = 'full_rot '
+                extra_info = f" (回転データフルサイズ)"
+            else:
+                extra_info = ""
+
+            print(f"{i}. {display_name:10} : {samples:6}サンプル ({memory_kb:7.1f}KB, {duration:6.2f}秒){extra_info}")
 
             # メモリ要件の注意
             if memory_kb > 200:
-                print(f"           → PSRAMまたは外部ストレージ必須")
+                print(f"              → PSRAMまたは外部ストレージ必須")
             elif memory_kb > 50:
-                print(f"           → ESP32-WROVER推奨")
+                print(f"              → ESP32-WROVER推奨")
             else:
-                print(f"           → 標準ESP32で使用可能")
+                print(f"              → 標準ESP32で使用可能")
 
-        print(f"{len(self.SIZE_PRESETS) + 1}. custom  : カスタムサイズ指定")
-        print(f"{len(self.SIZE_PRESETS) + 2}. all     : 複数サイズを一括生成")
+        print(f"{len(menu_items) + 1}. custom    : カスタムサイズ指定")
+        print(f"{len(menu_items) + 2}. all       : 複数サイズを一括生成")
 
-    def get_user_choice(self) -> Tuple[str, int]:
-        """ユーザーの選択を取得"""
-        self.display_menu()
+    def get_user_choice(self, data_type: str = "both") -> Tuple[str, int]:
+        """ユーザーの選択を取得
+
+        Args:
+            data_type: "translation", "rotation", "both"のいずれか
+
+        Returns:
+            (preset_name, samples)のタプル
+        """
+        self.display_menu(data_type)
+
+        # メニュー項目を構築
+        menu_items = list(self.SIZE_PRESETS.items())
+        if data_type == "translation" and self.translation_full_size:
+            menu_items.append(('full_trans', self.translation_full_size))
+        elif data_type == "rotation" and self.rotation_full_size:
+            menu_items.append(('full_rot', self.rotation_full_size))
+        elif data_type == "both":
+            if self.translation_full_size:
+                menu_items.append(('full_trans', self.translation_full_size))
+            if self.rotation_full_size:
+                menu_items.append(('full_rot', self.rotation_full_size))
 
         try:
-            choice = input(f"\n選択 (1-{len(self.SIZE_PRESETS) + 2}): ").strip()
+            choice = input(f"\n選択 (1-{len(menu_items) + 2}): ").strip()
 
             if choice.isdigit():
                 choice_num = int(choice)
-                if 1 <= choice_num <= len(self.SIZE_PRESETS):
-                    preset_name = list(self.SIZE_PRESETS.keys())[choice_num - 1]
-                    return preset_name, self.SIZE_PRESETS[preset_name]
-                elif choice_num == len(self.SIZE_PRESETS) + 1:
+                if 1 <= choice_num <= len(menu_items):
+                    preset_name, samples = menu_items[choice_num - 1]
+                    return preset_name, samples
+                elif choice_num == len(menu_items) + 1:
                     # カスタムサイズ
                     custom_size = int(input("カスタムサイズ（サンプル数）: "))
                     return "custom", custom_size
-                elif choice_num == len(self.SIZE_PRESETS) + 2:
+                elif choice_num == len(menu_items) + 2:
                     # 一括生成
                     return "all", 0
 
             print("無効な選択です。")
-            return self.get_user_choice()
+            return self.get_user_choice(data_type)
 
         except (ValueError, KeyboardInterrupt):
             print("\n終了します。")
@@ -265,10 +345,6 @@ CONFIG_SPIRAM_USE_MALLOC=y
     def generate_single(self, preset_name: str, samples: int) -> None:
         """単一サイズの配列を生成"""
 
-        if not self.confirm_generation(preset_name, samples):
-            print("キャンセルされました。")
-            return
-
         # データ読み込み
         trans_left, trans_right = self.read_signal_file(self.translation_file)
         if trans_left is None:
@@ -280,18 +356,35 @@ CONFIG_SPIRAM_USE_MALLOC=y
 
         print(f"元データ: 並進={len(trans_left):,}, 回転={len(rot_left):,} サンプル")
 
+        # サンプル数を決定
+        if preset_name == 'full_trans':
+            max_samples_trans = min(samples, len(trans_left))
+            max_samples_rot = min(samples, len(rot_left))
+        elif preset_name == 'full_rot':
+            max_samples_trans = min(samples, len(trans_left))
+            max_samples_rot = min(samples, len(rot_left))
+        else:
+            # 通常のプリセット（両方とも同じサンプル数）
+            max_samples_trans = min(samples, len(trans_left))
+            max_samples_rot = min(samples, len(rot_left))
+
+        if not self.confirm_generation(preset_name, max(max_samples_trans, max_samples_rot)):
+            print("キャンセルされました。")
+            return
+
         # 出力ファイル名を決定
-        if samples <= 1000:
+        max_samples = max(max_samples_trans, max_samples_rot)
+        if max_samples <= 1000:
             output_file = "main/include/embedded_signals.hpp"
         else:
             output_file = "main/include/fullsize_signals.hpp"
 
         # ヘッダーファイル生成
         self.generate_header_file(trans_left, trans_right, rot_left, rot_right,
-                                samples, output_file)
+                                max_samples_trans, max_samples_rot, output_file)
 
         # 次のステップを表示
-        self.show_next_steps(output_file, samples)
+        self.show_next_steps(output_file, max_samples)
 
     def generate_all(self) -> None:
         """全サイズを一括生成"""
@@ -303,7 +396,13 @@ CONFIG_SPIRAM_USE_MALLOC=y
 
         response = input("中・大・フルサイズも生成しますか？ (y/N): ").strip().lower()
         if response in ['y', 'yes']:
-            sizes_to_generate.extend(['medium', 'large', 'full'])
+            sizes_to_generate.extend(['medium', 'large'])
+
+            # フルサイズの場合は並進と回転を別々に追加
+            if self.translation_full_size:
+                sizes_to_generate.append('full_trans')
+            if self.rotation_full_size:
+                sizes_to_generate.append('full_rot')
 
         # データ読み込み（一度だけ）
         print("\nMATLABファイルを読み込み中...")
@@ -319,20 +418,33 @@ CONFIG_SPIRAM_USE_MALLOC=y
 
         # 各サイズを生成
         for preset_name in sizes_to_generate:
-            samples = self.SIZE_PRESETS[preset_name]
-            memory_bytes, memory_kb = self.calculate_memory_usage(samples)
+            # サンプル数を決定
+            if preset_name == 'full_trans':
+                max_samples_trans = self.translation_full_size
+                max_samples_rot = self.translation_full_size
+                samples = self.translation_full_size
+            elif preset_name == 'full_rot':
+                max_samples_trans = self.rotation_full_size
+                max_samples_rot = self.rotation_full_size
+                samples = self.rotation_full_size
+            else:
+                samples = self.SIZE_PRESETS[preset_name]
+                max_samples_trans = min(samples, len(trans_left))
+                max_samples_rot = min(samples, len(rot_left))
 
-            print(f"\n--- {preset_name}サイズ生成中 ({samples} samples, {memory_kb:.1f}KB) ---")
+            memory_bytes, memory_kb = self.calculate_memory_usage(max(max_samples_trans, max_samples_rot))
+
+            print(f"\n--- {preset_name}サイズ生成中 (並進:{max_samples_trans}, 回転:{max_samples_rot} samples, {memory_kb:.1f}KB) ---")
 
             # 出力ファイル名を決定
-            if samples <= 1000:
+            if max(max_samples_trans, max_samples_rot) <= 1000:
                 output_file = f"main/include/embedded_signals_{preset_name}.hpp"
             else:
                 output_file = f"main/include/fullsize_signals_{preset_name}.hpp"
 
             # ヘッダーファイル生成
             self.generate_header_file(trans_left, trans_right, rot_left, rot_right,
-                                    samples, output_file)
+                                    max_samples_trans, max_samples_rot, output_file)
 
         print(f"\n✓ 一括生成完了！ {len(sizes_to_generate)}個のファイルを生成しました")
         self.show_batch_next_steps()
@@ -383,6 +495,19 @@ CONFIG_SPIRAM_USE_MALLOC=y
                 print(f"Error: {self.rotation_file} が見つかりません")
                 print("MATLABでrobot_system_identification_input.mを実行してファイルを生成してください")
                 return
+
+            # データセットのサイズを読み込み
+            print("データセットのサイズを確認中...")
+            trans_left_temp, _ = self.read_signal_file(self.translation_file)
+            rot_left_temp, _ = self.read_signal_file(self.rotation_file)
+
+            if trans_left_temp is not None:
+                self.translation_full_size = len(trans_left_temp)
+                print(f"並進データセット: {self.translation_full_size:,} サンプル")
+
+            if rot_left_temp is not None:
+                self.rotation_full_size = len(rot_left_temp)
+                print(f"回転データセット: {self.rotation_full_size:,} サンプル")
 
             # ユーザー選択
             preset_name, samples = self.get_user_choice()

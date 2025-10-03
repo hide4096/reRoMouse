@@ -9,8 +9,8 @@ clock_period_trans = 0.01;   % クロック周期 [s]
 amplitude_trans = 1;       % 信号振幅 [V]
 
 % 回転モデル用パラメータ  
-n_rot = 12;                   % シフトレジスタ段数（周期: 2^7-1 = 127）
-clock_period_rot = 0.01;      % クロック周期 [s]
+n_rot = 9;                   % シフトレジスタ段数（周期: 2^7-1 = 127）
+clock_period_rot = 0.09;      % クロック周期 [s]
 amplitude_rot = 1;         % 信号振幅 [V]
 
 % 共通パラメータ
