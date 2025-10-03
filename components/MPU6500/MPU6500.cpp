@@ -21,7 +21,7 @@ MPU6500::MPU6500(spi_host_device_t bus, gpio_num_t cs){
         return;
     }
     
-    if(changesens(2,1) == -1){
+    if(changesens(3,1) == -1){
         while (1) {} // Add a placeholder statement
     }
 
