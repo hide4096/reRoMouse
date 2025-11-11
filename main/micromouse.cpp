@@ -104,38 +104,41 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
 
     // 速度
     //val.tar.acc = 0.5;
-    val.max.acc = 3.0;
+    val.max.acc = 2.5;
     //val.tar.vel = 0.3;
-    val.max.vel = 0.3;
-    val.min.vel = 0.05;
-    val.end.vel = 0.3;
+    val.max.vel = 0.25;
+    val.min.vel = 0.04;
+    val.end.vel = 0.25;
 
     // 角速度
-    val.tar.ang_acc = 0.0;
-    val.max.ang_acc = M_PI*12.0;
-    val.tar.ang_vel = 0.0;
-    val.max.ang_vel = M_PI*2.0;
+    //val.tar.ang_acc = 0.0;
+    val.max.ang_acc = M_PI*70.0;
+    //al.tar.ang_vel = 0.0;
+    val.max.ang_vel = M_PI*3.5;
     val.min.ang_vel = M_PI/4.0;
     val.end.ang_vel = 0.0;
 
     // スラロームパラメータ
-    val.sla.ang_acc = 145.0;
-    val.sla.ang_vel = 10.73;
+    val.sla.ang_acc = 110.0;
+    val.sla.ang_vel = 9.0;
 
     // 速度制御
     //control.v.Kp = pid_gain.speed_Kp;
     //control.v.Ki = pid_gain.speed_Ki;
     //control.v.Kd = pid_gain.speed_Kd;
-    control.v.Kp = 10.0; // 20~30 10でもいいかも
-    control.v.Ki = 1200.0; // 100
-    control.v.Kd = 0.001; 
+    control.v.Kp = 20.26; // 20~30 10でもいいかも
+    control.v.Ki = 353.3; // 100
+    control.v.Kd = -0.003271;
+    control.v.N = 1105;
     // 角速度制御
     //control.o.Kp = pid_gain.ang_vel_Kp;
     //control.o.Ki = pid_gain.ang_vel_Ki;
     //control.o.Kd = pid_gain.ang_vel_Kd;
-    control.o.Kp = 0.5; // 0.3,0.4でもあり
-    control.o.Ki = 20.0; // 30
+    control.o.Kp = 0.20098; // 0.3,0.4でもあり
+    control.o.Ki = 20.293; // 30
     control.o.Kd = 0.0;
+    control.o.N = 0.0;
+    // 高すぎるかもスピンしやすい
 
     // 壁制御
     //control.wall.Kp = pid_gain.wall_Kp;
@@ -143,7 +146,18 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //control.wall.Kd = pid_gain.wall_Kd;
     control.wall.Kp = 0.0003; //0.0001
     control.wall.Ki = 0.0;
-    control.wall.Kd = 0.0;
+    control.wall.Kd = 0.0000001;
+
+    // 角度制御（壁制御OFF時に使用）
+    control.d.Kp = 0.001;  // 角度維持用のPゲイン（要調整）
+    control.d.Ki = 0.0;  // 角度維持用のIゲイン
+    control.d.Kd = 0.0;  // 角度維持用のDゲイン
+
+    // 静摩擦補償
+    control.static_friction_compensation_straight = 0.08;  // 静止状態から直進加速時の補償Duty値（要調整）
+    control.static_friction_compensation_turn = 0.08;  // 静止状態から超信地旋回時の補償Duty値（要調整）
+    control.stationary_threshold_vel = 0.005;  // 静止判定の速度閾値 [m/s]
+    control.stationary_threshold_ang_vel = 0.01;  // 静止判定の角速度閾値 [rad/s]
 
     // 壁センサ閾値
     //sens.wall.th_wall.fl = wall_threshold.th_wall_fl;
@@ -154,14 +168,14 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     //sens.wall.th_control.r = wall_threshold.th_control_r;
     //sens.wall.ref.l = wall_threshold.ref_l;
     //sens.wall.ref.r = wall_threshold.ref_r;
-    sens->wall.th_wall.fl = 3650;
-    sens->wall.th_wall.fr = 4160;
-    sens->wall.th_wall.l = 4950;
-    sens->wall.th_wall.r = 4130;
-    sens->wall.th_control.l = 9050; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
-    sens->wall.th_control.r = 9250;
-    sens->wall.ref.l = 11550; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
-    sens->wall.ref.r = 11450;
+    sens->wall.th_wall.fl = 1650; //2000
+    sens->wall.th_wall.fr = 1660; //2000
+    sens->wall.th_wall.l = 4000;  //4000
+    sens->wall.th_wall.r = 4000;  //4000
+    sens->wall.th_control.l = 9950; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
+    sens->wall.th_control.r = 9550;
+    sens->wall.ref.l = 10550; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
+    sens->wall.ref.r = 10150;
 
     // 3612
     // 3769
@@ -211,6 +225,14 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
 
             driver->led->set(0b1111);
             sens->gyro.ref = driver->imu->surveybias(2000);
+            sens->accel.y_ref = driver->imu->surveybias_accel_y(2000);
+            
+            // IMUセンサオフセット位置の設定（回転中心からの距離）
+            // x = 15.036mm, y = 21.044mm, z = 0mm
+            sens->accel.offset.x = 0.015036;  // [m] 前方向
+            sens->accel.offset.y = 0.021044;  // [m] 右方向
+            sens->accel.offset.z = 0.0;       // [m] 上方向
+            
             mode_select(&mode, motion, sens, &val, &control, &map);
             control.flag = FALSE;
         }
@@ -218,6 +240,7 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
         {
             driver->led->set(0b1111);
             sens.gyro.ref = driver->imu->surveybias(2000);
+            sens.accel.y_ref = driver->imu->surveybias_accel_y(2000);
             mode_select(&mode, motion, &sens, &val, &control, &map);
             control.flag = FALSE;
             time_count = 0;
