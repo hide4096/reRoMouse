@@ -929,8 +929,6 @@ void myTaskAdc(void *pvpram)
     uint16_t charge_us = 500; // コンデンサへの充電時間
     uint16_t rise_us = 30;    // 放電してからセンサの読み取りを開始するまでの時間
 
-    // std::shared_ptr<t_sens_data> sens = std::make_shared<t_sens_data>();
-
     while (1)
     {
         sens.BatteryVoltage = driver->adc->BatteryVoltage();
@@ -969,55 +967,35 @@ void myTaskAdc(void *pvpram)
             driver->adc->value[3] = driver->adc->_off - driver->adc->_on;
         }
 
-        // sens_dir の都合上,uintにできないのでintでマイナス値の処理を入れる
-
         sens.wall.val.fr = driver->adc->value[0];
         sens.wall.val.r = driver->adc->value[2];
         sens.wall.val.l = driver->adc->value[1];
         sens.wall.val.fl = driver->adc->value[3];
-        /*sens.wall.val.fr = driver->adc->value[0] + INIT_STATE_FL;
-        int16_t fr = sens.wall.val.fr % 65536;
-        if (fr >= 0)
-        {
-            sens.wall.val.fr = fr;
-        }
-        else
-        {
-            sens.wall.val.fr = -fr;
-        }
-        sens.wall.val.r = driver->adc->value[2] + INIT_STATE_R;
-        int16_t r = sens.wall.val.r % 65536;
-        if (r >= 0)
-        {
-            sens.wall.val.r = r;
-        }
-        else
-        {
-            sens.wall.val.r = -r;
-        }
-        sens.wall.val.l = driver->adc->value[1] + INIT_STATE_L;
-        int16_t l = sens.wall.val.l % 65536;
-        if (l >= 0)
-        {
-            sens.wall.val.l = l;
-        }
-        else
-        {
-            sens.wall.val.l = -l;
-        }
-        sens.wall.val.fl = driver->adc->value[3] + INIT_STATE_FR;
-        int16_t fl = sens.wall.val.fl % 65536;
-        if (fl >= 0)
-        {
-            sens.wall.val.fl = fl;
-        }
-        else
-        {
-            sens.wall.val.fl = -fl;
-        }*/
-
-        // printf("sens.wall.val.fl:%d  sens.wall.val.l:%d  sens.wall.val.r:%d  sens.wall.val.fr:%d\n", sens.wall.val.fl, sens.wall.val.l, sens.wall.val.r, sens.wall.val.fr);
-        // printf("r:%d\n", r);
+        
+        // === 壁センサローパスフィルタ（指数移動平均） ===
+        static float wall_fl_filtered = 0.0;
+        static float wall_fr_filtered = 0.0;
+        static float wall_l_filtered = 0.0;
+        static float wall_r_filtered = 0.0;
+        static const float wall_filter_alpha = 0.5; // 指数移動平均の重み（0.0-1.0、小さいほど平滑化が強い）
+        
+        // 生の壁センサ値を取得
+        float raw_fl = sens.wall.val.fl;
+        float raw_fr = sens.wall.val.fr;
+        float raw_l = sens.wall.val.l;
+        float raw_r = sens.wall.val.r;
+        
+        // 指数移動平均（EMAフィルタ）
+        wall_fl_filtered = wall_filter_alpha * raw_fl + (1.0 - wall_filter_alpha) * wall_fl_filtered;
+        wall_fr_filtered = wall_filter_alpha * raw_fr + (1.0 - wall_filter_alpha) * wall_fr_filtered;
+        wall_l_filtered = wall_filter_alpha * raw_l + (1.0 - wall_filter_alpha) * wall_l_filtered;
+        wall_r_filtered = wall_filter_alpha * raw_r + (1.0 - wall_filter_alpha) * wall_r_filtered;
+        
+        // フィルタ後の値を構造体に書き戻す
+        sens.wall.val.fl = (int)wall_fl_filtered;
+        sens.wall.val.fr = (int)wall_fr_filtered;
+        sens.wall.val.l = (int)wall_l_filtered;
+        sens.wall.val.r = (int)wall_r_filtered;
 
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -1200,7 +1178,9 @@ extern "C" void app_main(void)
         //   printf("driver->adc->off:%d\n", driver->adc->_off);
         MICROMOUSE(driver, &sens);
 
-        // driver->mot->setMotorSpeed((0.1), (0.1));
+        //driver->mot->setMotorSpeed((0.2), (0.2));
+
+        
 
         // printf("Z : %ld\n", h);
         /*
