@@ -25,7 +25,7 @@ void Log::log_print()
     }
 
     uint32_t mem_offset = 0;
-    int16_t data[27];
+    int16_t data[37];  // 35列 → 37列に拡張（加速度データ2つ追加）
     int64_t run_time = 0;
     int64_t search_time = 0;
 
@@ -37,16 +37,22 @@ void Log::log_print()
             break;
         }
         
-        //run_time = ((int64_t)data[29] << 48) | ((int64_t)data[28] << 32) | ((int64_t)data[27] << 16) | (int64_t)data[26];
-        //search_time = ((int64_t)data[33] << 48) | ((int64_t)data[32] << 32) | ((int64_t)data[31] << 16) | (int64_t)data[30];
-
-        printf("%4d,%4d,%4d,%4d,%4d,", data[0], data[1], data[2], data[3], data[4]);
+        // 既存データ (0-26)
+        // 壁センサ値（0-3）はuint16_tとして解釈（0-65535の範囲を保持）
+        printf("%5u,%5u,%5u,%5u,%4d,", (uint16_t)data[0], (uint16_t)data[1], (uint16_t)data[2], (uint16_t)data[3], data[4]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[5], data[6], data[7], data[8], data[9]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[10], data[11], data[12], data[13], data[14]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[15], data[16], data[17], data[18], data[19]);
         printf("%1d,%1d,%1d,%1d,%1d,", data[20], data[21], data[22], data[23], data[24]);
-        //printf("%1d,%1lld,%1lld\n", data[25], run_time, search_time);
-        printf("%1d,%1d\n", data[25], data[26]);
+        printf("%1d,%1d,", data[25], data[26]);
+        
+        // オドメトリデータ (27-34)
+        printf("%1d,%1d,%1d,", data[27], data[28], data[29]); // 生センサ x_pos, y_pos, theta
+        printf("%1d,%1d,%1d,", data[30], data[31], data[32]); // セル補正 x_pos_corrected, y_pos_corrected, theta_corrected
+        printf("%1d,%1d,", data[33], data[34]);              // 真値セル座標 cell_x, cell_y
+        
+        // 加速度データ (35-36)
+        printf("%1d,%1d\n", data[35], data[36]);             // 生の加速度, 移動平均後の加速度
 
         mem_offset += sizeof(data);
         if (mem_offset >= partition->size)
