@@ -41,6 +41,9 @@ public:
     float gyroZ();
     float gyro_sensitivity = 1, accel_sensitivity = 1;
     bool in_survaeybias = false;
+    
+    // 加速度バイアス除去用メソッド
+    float surveybias_accel_y(int reftime);
 
     void Shar_SensData(t_sens_data *_sens) override;
 

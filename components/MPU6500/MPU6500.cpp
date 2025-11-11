@@ -136,6 +136,19 @@ float MPU6500::surveybias(int reftime){
     return (float)(r_yaw_ref_tmp / reftime);
 }
 
+float MPU6500::surveybias_accel_y(int reftime){
+    in_survaeybias = true; //  バイアスサーベイ中フラグを立てる
+    vTaskDelay(1000/portTICK_PERIOD_MS); //  1000ms待つ（静止を確実にする）
+    float accel_y_ref_tmp = 0;
+    for(uint16_t i = 0; i < reftime; i++){
+        // バイアス補正前の生の値を使用（accelY()ではなくaccelY_raw()を使用）
+        accel_y_ref_tmp += (float)accelY_raw() * accel_sensitivity;
+        vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+    in_survaeybias = false; 
+    return (float)(accel_y_ref_tmp / reftime);
+}
+
 uint8_t MPU6500::whoami(){
     return read(0x75);  //  0x00
 }
