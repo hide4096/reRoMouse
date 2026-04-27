@@ -184,7 +184,7 @@ void Fast4::main_task() // Task Number 5
     // 最短（既地区間加速）
 
     val->fast_ref.vel = 0.25;
-    val->max.acc = 3.0; // 加減速で分けたほうがいいかも
+    val->max.acc = 2.0; // 加減速で分けたほうがいいかも
 
     val->current.rad = 0.0;
     val->sum.len = 0.0;

@@ -18,10 +18,15 @@ void Test::main_task() // Task Number 6
 {
     control->log_flag = TRUE;
     //motion.check_enkaigei(); // ok
-    motion.CheckMotorDuty(0.1, -0.1, 5000); // ok
+    motion.CheckMotorDuty(0.05, -0.05, 1000); // ok
     
     // 不感帯検出テスト
-    //motion.DetectDeadZone(0.005, 0.30, 10, 500); // 0.0 ~ 0.30 まで0.005刻みで10msごとにデューティ更新
+    //motion.DetectDeadZone(0.005, 0.10, 10, 1000); // 0.0 ~ 0.30 まで0.005刻みで10msごとにデューティ更新
+
+    //motion.CalibrateWallSensorDistance();
+    // vel : 0.08 , ang_vel : 0.05
+
+    //motion.calibrate_wall_th();
     
     //motion.back();
     control->log_flag = FALSE;
@@ -45,19 +50,26 @@ void Test2::main_task() // Task Number 7
     control->log_flag = TRUE;
     
     // 飽和領域検出テスト
-    motion.DetectSaturationRegion(0.1, 0.05, 0.8, 1, 500); // 0.1 ~ 0.80 まで0.05刻みで1msごとにデューティ更新
+   // motion.DetectSaturationRegion(0.1, 0.05, 0.8, 1, 500); // 0.1 ~ 0.80 まで0.05刻みで1msごとにデューティ更新
     
-    /*
+    
     val->sum.len = 0.0;
     motion.offset2(); // 14mm
     motion.run_half(); // 45mm
-    motion.run();  // 1 90mm
-    motion.run();  // 2
-    motion.run();  // 3
-    motion.run();  // 4
-    motion.run();  // 5
-    // motion.run();  // 6
-    // motion.run();  // 7
+    motion.run2();  // 1 90mm
+    uint8_t i = 0;
+    while (i < 15)
+    {
+        motion.run2();
+        i++;
+    }
+    
+    // motion.run2();  // 2
+    // motion.run2();  // 3
+    // motion.run2();  // 4
+    // motion.run2();  // 5
+    // motion.run2();  // 6
+    // motion.run2();  // 7
     // motion.run();  // 8
     // motion.run();  // 9
     // motion.run();  // 10
@@ -65,9 +77,28 @@ void Test2::main_task() // Task Number 7
     // motion.run();  // 12
     // motion.run();  // 13
     //motion.run();  // 14
+    // motion.slalom_right(); // ok
+    
+    // === slalom_jerk（躍度制御スラローム）の使用例 ===
+    // 9フェーズの時間配列と躍度値は micromouse.cpp で初期化・設定されています。
+    // val->slalom_jerk_phase_ms[9]: 各フェーズの継続時間 [ms]
+    //   phase[0]: 直進 (20ms)
+    //   phase[1]: 躍加速 (15ms)
+    //   phase[2]: 定速 (10ms)
+    //   phase[3]: 躍減速 (15ms)
+    //   phase[4]: 定速 (10ms)
+    //   phase[5]: 躍減速 (15ms)
+    //   phase[6]: 定速 (10ms)
+    //   phase[7]: 躍加速 (15ms)
+    //   phase[8]: 直進 (20ms)
+    // val->slalom_jerk_value: 角躍度 [rad/s^3]
+    // 躍度積分は Interrupt::calc_target() で実行されます。
+    
+    //motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    
     motion.stop(); // 45mm
     motion.turn_half();
-    */
+    
     control->log_flag = FALSE;
     std::cout << "Test2" << std::endl;
 }
@@ -86,7 +117,12 @@ void Test3::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test3::main_task() // Task Number 8
 {
+    val->current.rad = 0.0;
+    val->current.vel = 0.0;
+    val->current.len = 0.0;
+
     control->log_flag = TRUE;
+
     motion.turn_left_2(); // ok
     motion.turn_left_2();
     motion.turn_left_2();
@@ -95,6 +131,27 @@ void Test3::main_task() // Task Number 8
     motion.turn_left_2();
     motion.turn_left_2();
     motion.turn_left_2();
+
+    /*motion.offset2(); // 14mm
+    motion.run_half(); // 45mm
+    motion.run();  // 1 90mm
+    motion.run();  // 2
+    motion.run();  // 3
+    motion.run();  // 4
+    motion.run();  // 5
+    motion.run();  // 6
+    motion.run();  // 7
+    motion.slalom_right(); // ok
+    motion.run();  // 1 90mm
+    motion.run();  // 2
+    motion.run();  // 3
+    motion.run();  // 4
+    motion.run();  // 5
+    motion.run();  // 6
+    motion.run();  // 7
+    motion.stop(); // ok
+    motion.turn_half();*/
+
     control->log_flag = FALSE;
     std::cout << "Test3" << std::endl;
 }
@@ -113,6 +170,10 @@ void Test4::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test4::main_task() // Task Number 9
 {
+    val->current.rad = 0.0;
+    val->current.vel = 0.0;
+    val->current.len = 0.0;
+
     control->log_flag = TRUE;
     motion.turn_right_2(); // ok
     motion.turn_right_2();
@@ -122,6 +183,28 @@ void Test4::main_task() // Task Number 9
     motion.turn_right_2();
     motion.turn_right_2();
     motion.turn_right_2();
+
+
+    /*motion.offset2(); // 14mm
+    motion.run_half(); // 45mm
+    motion.run();  // 1 90mm
+    motion.run();  // 2
+    motion.run();  // 3
+    motion.run();  // 4
+    motion.run();  // 5
+    motion.run();  // 6
+    motion.run();  // 7
+    motion.slalom_left(); // ok
+    motion.run();  // 1 90mm
+    motion.run();  // 2
+    motion.run();  // 3
+    motion.run();  // 4
+    motion.run();  // 5
+    motion.run();  // 6
+    motion.run();  // 7
+    motion.stop(); // ok
+    motion.turn_half();*/
+
     control->log_flag = FALSE;
     std::cout << "Test4" << std::endl;
 }
@@ -143,10 +226,22 @@ void Test5::main_task() // Task Number 10
     control->log_flag = TRUE;
     //motion.set_pid_gain();       // ok
     //motion.set_wall_threshold(); // ok
-    motion.run2(); // ok
-    motion.slalom_left(); // ok
-    motion.slalom_right(); // ok
+    val->sum.len = 0.0;
+    val->current.rad = 0.0;
+    val->current.vel = 0.0;
+
+    motion.offset2(); // 14mm
+    motion.run_half(); // 45mm
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
+    motion.slalom_jerk(SLA_LEFT, val->slalom_jerk_value, val->slalom_jerk_phase_ms, 9);
     motion.stop(); // ok
+    motion.turn_half();
     control->log_flag = FALSE;
     //std::cout << "Test" << std::endl;
 }
@@ -165,14 +260,16 @@ void Test6::ref_by_motion(Adachi &_adachi) { motion = _adachi; }
 
 void Test6::main_task() // Task Number 11
 {
+    val->current.rad = 0.0;
+    val->current.len = 0.0;
     control->log_flag = TRUE;
     motion.offset2(); // 14mm
     motion.run_half(); // 45mm
-    motion.run2();  // 1
-    motion.run2();  // 2
-    motion.run2();  // 3
-    motion.run2();  // 4
-    motion.run2();  // 5
+    motion.slalom_right();  // 1
+    motion.slalom_left();  // 2
+    motion.slalom_right();  // 3
+    motion.slalom_left();  // 4
+    motion.slalom_right();  // 5
     // motion.run2();  // 6
     // motion.run2();  // 7
     // motion.run2();  // 8
@@ -331,7 +428,7 @@ void SystemIdentificationTest::main_task() // Task Number 15 (System Identificat
     printf("Using signals from MATLAB-generated data\n");
 
     // フルサイズ並進モデル実験を実行
-    run_fullsize_rotation_identification();
+    run_fullsize_translation_identification();
 
     // 必要に応じて回転モデル実験も実行
     // run_fullsize_rotation_identification();
@@ -555,8 +652,8 @@ void SystemIdentificationTest::run_fullsize_translation_identification()
 
     // フルサイズ信号を使用して実験を実行
     motion.RunTranslationIdentification(
-        FullSizeSignals::translation_signal_left_40950,
-        FullSizeSignals::translation_signal_right_40950,
+        FullSizeSignals::translation_signal_left_45900,
+        FullSizeSignals::translation_signal_right_45900,
         FullSizeSignals::TRANSLATION_SAMPLES,
         FullSizeSignals::SAMPLING_PERIOD_MS
     );
@@ -584,8 +681,8 @@ void SystemIdentificationTest::run_fullsize_rotation_identification()
 
     // フルサイズ信号を使用して実験を実行
     motion.RunRotationIdentification(
-        FullSizeSignals::rotation_signal_left_45990,
-        FullSizeSignals::rotation_signal_right_45990,
+        FullSizeSignals::rotation_signal_left_45900,
+        FullSizeSignals::rotation_signal_right_45900,
         FullSizeSignals::ROTATION_SAMPLES,
         FullSizeSignals::SAMPLING_PERIOD_MS
     );
