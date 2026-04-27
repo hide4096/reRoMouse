@@ -165,12 +165,12 @@ function mouse_log_viewer()
                         end
 
                         % リアルタイム表示（最新データ）
-                        if mod(sample_count, 10) == 0
+                        if mod(sample_count, 100) == 0
                             display_latest_data(data);
                         end
 
                         % 定期的なデータ保存（30秒ごと）
-                        if toc(last_save_time) > 30
+                        if toc(last_save_time) > 60
                             save_temp_data(data_buffer, sample_count);
                             last_save_time = tic;
                         end
@@ -216,6 +216,8 @@ function update_plots(data_buffer, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11,
     sample_indices = 1:size(data_buffer, 1);
     
     % データの変換（スケーリング）
+    % 壁センサ値（0-3列）は uint16_t（0-65535）の範囲
+    % CSVから読み込んだ値は既に正の値として出力されているため、そのまま使用
     wall_fl = data_buffer(:, 1);
     wall_l = data_buffer(:, 2);
     wall_r = data_buffer(:, 3);
@@ -228,7 +230,7 @@ function update_plots(data_buffer, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11,
     ang_vel_target = data_buffer(:, 10) / 1000;
     rad_current = data_buffer(:, 11) / 1000; % mrad to rad
     accel_target = data_buffer(:, 12) / 1000; % mm/s² to m/s²
-    ang_accel_target = data_buffer(:, 13) / 1000; % mrad/s² to rad/s²
+    ang_accel_target = data_buffer(:, 13) / 100; % 角加速度は100倍スケール (0.01 rad/s² to rad/s²)
     vel_error = data_buffer(:, 14) / 1000;
     vel_i_error = data_buffer(:, 15) / 1000;
     vel_d_error = data_buffer(:, 16) / 1000;

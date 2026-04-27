@@ -164,7 +164,7 @@ end
 function data = parse_simple_csv(line)
     try
         data_str = split(line, ',');
-        data = zeros(1, min(length(data_str), 27));
+        data = zeros(1, min(length(data_str), 35));  % 35列に対応（オドメトリ+セル座標）
         
         for i = 1:length(data)
             data(i) = str2double(data_str{i});

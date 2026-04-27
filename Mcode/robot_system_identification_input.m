@@ -4,8 +4,8 @@ clear; close all; clc;
 fprintf('=== 対向二輪型ロボット システム同定用入力信号生成 ===\n\n');
 
 % 並進モデル用パラメータ
-n_trans = 12;                % シフトレジスタ段数（周期: 2^6-1 = 63）
-clock_period_trans = 0.01;   % クロック周期 [s]
+n_trans = 8;                % シフトレジスタ段数（周期: 2^6-1 = 63）
+clock_period_trans = 0.18;   % クロック周期 [s]
 amplitude_trans = 1;       % 信号振幅 [V]
 
 % 回転モデル用パラメータ  

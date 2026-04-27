@@ -108,6 +108,8 @@ function [processed_data, labels, units] = process_log_data(data_buffer)
     processed_data = struct();
     
     % データの変換（適切なスケーリング）
+    % 壁センサ値（0-3列）は uint16_t（0-65535）の範囲
+    % CSVから読み込んだ値は既に正の値として出力されているため、そのまま使用
     processed_data.wall_fl = data_buffer(:, 1);
     processed_data.wall_l = data_buffer(:, 2);
     processed_data.wall_r = data_buffer(:, 3);
@@ -120,7 +122,7 @@ function [processed_data, labels, units] = process_log_data(data_buffer)
     processed_data.ang_vel_target = data_buffer(:, 10) / 1000; % rad/s
     processed_data.rad_current = data_buffer(:, 11) / 1000; % rad
     processed_data.accel_target = data_buffer(:, 12) / 1000; % m/s²
-    processed_data.ang_accel_target = data_buffer(:, 13) / 1000; % rad/s²
+    processed_data.ang_accel_target = data_buffer(:, 13) / 100; % 角加速度は100倍スケール (0.01 rad/s² to rad/s²)
     processed_data.vel_error = data_buffer(:, 14) / 1000; % m/s
     processed_data.vel_i_error = data_buffer(:, 15) / 1000; % m/s
     processed_data.vel_d_error = data_buffer(:, 16) / 1000; % m/s

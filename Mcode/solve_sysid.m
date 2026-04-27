@@ -1,7 +1,7 @@
 
 
 u = duty_l;
-y = ang_vel_current;
+y = vel_current;
 
 np = 2;
 nz = 0;
