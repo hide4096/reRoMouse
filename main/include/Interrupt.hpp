@@ -38,6 +38,19 @@ class Interrupt : public Micromouse{
         void calc_angle();
         float calc_target_accel();
         void estimate_velocity_fusion();  // エンコーダ+IMU融合速度推定
+        float compensate_centripetal_acceleration(float accel_y_raw); // 向心加速度補正
+        float FF_control_velocity(float r_in); // 速度フィードフォワード制御
+        float FF_control_angular_velocity(float r_in); // 角速度フィードフォワード制御
+        
+        // オドメトリ関連メソッド
+        void update_odometry();                    // オドメトリ更新
+        void update_cell_reference_position();     // セル基準位置を更新
+        void calculate_position_error();           // 位置誤差を計算
+        void sync_position_from_cell();            // セル座標から推定位置を同期
+        void reset_odometry_to_cell_center();      // セル中心にリセット
+        void apply_cell_correction();              // セル位置によるオドメトリ補正を適用
+        void calculate_corrected_position_error(); // 補正後位置誤差を計算
+        
         t_sens_data *sens;
         t_mouse_motion_val *val;
         t_control *control;
@@ -52,6 +65,26 @@ class Interrupt : public Micromouse{
         int64_t start_time = 0;
         int64_t end_time = 0;
         int64_t delta_time = 0;
+
+        // 速度FF制御用配列
+        float r[3] = {0.0, 0.0, 0.0};
+        float u[3] = {0.0, 0.0, 0.0};
+        
+        // 角速度FF制御用配列
+        float r_ang[3] = {0.0, 0.0, 0.0};
+        float u_ang[3] = {0.0, 0.0, 0.0};
+        
+        // 加速度センサ関連（30ms移動平均用）
+        static constexpr int ACCEL_MA_SIZE = 30;  // 30ms分（1ms周期想定）
+        float accel_y_buffer[ACCEL_MA_SIZE] = {0.0};
+        int accel_buffer_index = 0;
+        float accel_y_raw = 0.0;        // 生の加速度値
+        float accel_y_filtered = 0.0;   // 移動平均後の加速度値
+        
+        // 角加速度計算用
+        float prev_ang_vel = 0.0;         // 前回の角速度 [rad/s]
+        float ang_accel = 0.0;            // 角加速度 [rad/s²]
+        float ang_accel_filtered = 0.0;   // フィルタ後の角加速度 [rad/s²]
 
         std::shared_ptr<NeoPixel> np;
         std::shared_ptr<MPU6500> imu;

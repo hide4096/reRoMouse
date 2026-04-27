@@ -12,7 +12,7 @@
 #define FRONT_WALL_LIMIT_FR 14600
 #define DONE 1
 #define NOT_YET 0
-#define PRE_DISTANCE 0.0050
+#define PRE_DISTANCE 0.0049
 #define FOL_DISTANCE 0.0054
 
 static BUZZER::buzzer_score_t pc98[] = {{2000, 100}, {1000, 100}};
@@ -164,7 +164,7 @@ void Motion::run2()
         if (sens->wall.exist.r == FALSE && r_wall_check == TRUE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98, 2);
-            val->current.len = 0.052;
+            val->current.len = 0.054;
             hosei_flag = TRUE;
         }
 
@@ -179,7 +179,7 @@ void Motion::run2()
         if (sens->wall.exist.r == TRUE && r_wall_check == FALSE && hosei_flag == FALSE)
         {
             bz->play_melody(pc98_2, 2);
-            val->current.len = 0.038;
+            val->current.len = 0.040;
             hosei_flag = TRUE;
         }
 

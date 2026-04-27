@@ -2,10 +2,19 @@
 #define MOTION_HPP
 
 #include <iostream>
+#include <cstddef>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>    // freertos以下のファイルをインクルードしたい場合、必ず先にFreeRTOS.hをインクルードする
 #include "../Base_func.hpp"
 #include "files.hpp"
+
+// 壁センサの列挙型（距離推定用・4センサ個別）
+enum class WallSensor {
+    FL,  // 前左センサ（距離推定 + 姿勢角推定用）
+    FR,  // 前右センサ（距離推定 + 姿勢角推定用）
+    L,   // 左壁センサ（距離推定用）
+    R    // 右壁センサ（距離推定用）
+};
 
 class Motion : public Micromouse
 {
@@ -29,6 +38,8 @@ class Motion : public Micromouse
         void back();
         void slalom_left();
         void slalom_right();
+        void slalom_time(uint8_t dir_flag, uint32_t accel_ms, uint32_t const_ms, uint32_t decel_ms);
+    void slalom_jerk(uint8_t dir_flag, float jerk, const uint32_t *phase_ms, size_t phase_count);
         void check_enkaigei();
         void turn_left_2();
         void turn_right_2();
@@ -51,6 +62,16 @@ class Motion : public Micromouse
         void ApplySystemIdentificationSignal(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms);
         void RunTranslationIdentification(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms);
         void RunRotationIdentification(const float* signal_left, const float* signal_right, int num_samples, int sampling_period_ms);
+
+        // 加速度再計算関数
+        float RecalculateAcceleration(float current_position, float target_position, float current_velocity, float control_period = 0.001);
+        float RecalculateAngularAcceleration(float current_angle, float target_angle, float current_angular_velocity, float control_period = 0.001);
+
+        // 壁センサ距離推定用の関数
+        void MeasureWallSensorDistance(uint32_t duration_ms = 5000);
+        void CalibrateWallSensorDistance();
+        float ConvertSensorValueToDistance(uint16_t sensor_value, WallSensor sensor);
+        void TestWallDistanceConversion();
 
         
     protected:
