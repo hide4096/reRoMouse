@@ -112,15 +112,51 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
 
     // 角速度
     //val.tar.ang_acc = 0.0;
-    val.max.ang_acc = M_PI*70.0;
+    val.max.ang_acc = M_PI*60.0;
     //al.tar.ang_vel = 0.0;
-    val.max.ang_vel = M_PI*3.5;
+    val.max.ang_vel = M_PI*3.0;
     val.min.ang_vel = M_PI/4.0;
     val.end.ang_vel = 0.0;
 
     // スラロームパラメータ
     val.sla.ang_acc = 110.0;
     val.sla.ang_vel = 9.0;
+    // 躍度パラメータ（角躍度: rad/s^3）
+    // sla.ang_jerk はスラローム設計上の望ましい躍度制限、
+    // max.ang_jerk は車体の物理制約に基づく上限として設定します。
+    val.sla.ang_jerk = 3880.0; // 初期値：sla.ang_acc * 10 の目安
+    val.max.ang_jerk = val.max.ang_acc * 5.0; // 機体上の最大躍度（適宜チューニング）
+    
+
+    // スラローム（躍度制御用）専用パラメータを既存のスラローム値に合わせて初期化
+    // ここで別の初期値を設定すると、通常スラロームと躍度制御時の挙動を分離できます。
+    val.sla_jerk.ang_acc = 143.6;
+    val.sla_jerk.ang_vel = 9.331;
+    val.sla_jerk.ang_jerk = val.sla.ang_jerk;
+
+    // slalom_jerk の時間配列を初期化
+    // ※ phase[0]（前距離）と phase[8]（後距離）は距離ベース管理のため、
+    //    以下の配列値は使用されません（phase[1]～phase[7]のみ使用）。
+    // phase[0]: 直進（距離管理：PRE_DISTANCE）
+    // phase[1]: 躍加速            (15ms)
+    // phase[2]: 定速              (10ms)
+    // phase[3]: 躍減速            (15ms)
+    // phase[4]: 定速              (10ms)
+    // phase[5]: 躍減速            (15ms)
+    // phase[6]: 定速              (10ms)
+    // phase[7]: 躍加速            (15ms)
+    // phase[8]: 直進（距離管理：FOL_DISTANCE）
+    const uint32_t default_phase_ms[9] = {0, 37, 28, 37, 66, 37, 28, 37, 0};
+    for (int i = 0; i < 9; ++i)
+    {
+        val.slalom_jerk_phase_ms[i] = default_phase_ms[i];
+    }
+    val.slalom_jerk_value = 3880.0f; // 躍度 [rad/s^3]（初期値：保守的な値）
+    
+    // 躍度積分制御フラグの初期化
+    val.jerk_integration_enabled = FALSE;
+    val.current_jerk = 0.0f;
+    val.phase_timestamp_ms = 0;
 
     // 速度制御
     //control.v.Kp = pid_gain.speed_Kp;
@@ -148,10 +184,16 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     control.wall.Ki = 0.0;
     control.wall.Kd = 0.0000001;
 
+    // 柱制御
+    control.pillar.Kp = 0.0003;
+    control.pillar.Ki = 0.0;
+    control.pillar.Kd = 0.0000001;
+
     // 角度制御（壁制御OFF時に使用）
     control.d.Kp = 0.001;  // 角度維持用のPゲイン（要調整）
     control.d.Ki = 0.0;  // 角度維持用のIゲイン
     control.d.Kd = 0.0;  // 角度維持用のDゲイン
+
 
     // 静摩擦補償
     control.static_friction_compensation_straight = 0.08;  // 静止状態から直進加速時の補償Duty値（要調整）
@@ -172,17 +214,24 @@ void MICROMOUSE(std::shared_ptr<t_drivers> driver, t_sens_data *sens)
     sens->wall.th_wall.fr = 1660; //2000
     sens->wall.th_wall.l = 4000;  //4000
     sens->wall.th_wall.r = 4000;  //4000
-    sens->wall.th_control.l = 9950; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
-    sens->wall.th_control.r = 9550;
-    sens->wall.ref.l = 10550; // 壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
-    sens->wall.ref.r = 10150;
+    sens->wall.th_pillar.l = 2000; // 柱検出の閾値。壁制御の閾値より大きく、これより大きいと柱と判断する。
+    sens->wall.th_pillar.r = 2000;
+    sens->wall.th_control.l = 9050; // 壁制御が入るか否かの閾値。これより大きいと壁制御が有効化。なるべく大きい値に設定するのが望ましい
+    sens->wall.th_control.r = 7050;
+    sens->wall.ref_pillar.l = 3750; // 柱制御の目標値
+    sens->wall.ref_pillar.r = 3600;
+    sens->wall.ref.l = 10550; // 壁制御の目標値。壁から離れるほど値が小さく、近づくほど値が大きい。壁から離れてほしいときは小さく設定。
+    sens->wall.ref.r = 8150;
 
     // 3612
     // 3769
 
+    //10550
+    //10150
+
     // ゴール座標
-    map.GOAL_X = 8;
-    map.GOAL_Y = 8;
+    map.GOAL_X = 13;
+    map.GOAL_Y = 16;
 
     ADS7066 *adc = driver->adc.get();
 

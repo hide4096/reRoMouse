@@ -124,11 +124,13 @@ typedef struct
     float ang_error = 0;    //angular error
     float acc = 0;  //acceleration
     float ang_acc = 0;  //angular acceleration
+    float ang_jerk = 0; // angular jerk (rad/s^3)
     float len = 0;   //length
     float len_half = 0; //length half
     float wall_val = 0; //wall value
     float wall_error = 0;   //wall error
-    float alpha = 0;    //相補フィルタ用
+    float pillar_error = 0; //pillar error (for PD control)
+    float alpha = 0.1;    //相補フィルタ用
     t_local_dir flag;
 }t_motion;  //motion parameter
 
@@ -147,8 +149,16 @@ typedef struct
     t_motion sum;   //sum
     t_motion I;    //integral
     t_motion sla;  //slalom
+    t_motion sla_jerk; // slalom parameters dedicated for jerk-based control (ang_acc, ang_vel, ang_jerk)
     t_motion fast_ref; // 最短走行時基準速
     t_motion fast_high; // 既地区間加速時速
+    float start_angle = 0.0;  // 直進開始時の角度保存用
+    t_bool angle_control_mode = FALSE;  // 角度制御モード（壁制御OFF時に有効）
+    uint32_t slalom_jerk_phase_ms[9] = {0};  // slalom_jerk の9フェーズ時間配列 [ms]
+    float slalom_jerk_value = 0.0f;  // slalom_jerk の躍度パラメータ [rad/s^3]
+    t_bool jerk_integration_enabled = FALSE;  // 躍度積分制御の有効フラグ
+    float current_jerk = 0.0f;  // 現在の躍度値 [rad/s^3]（Interrupt内で積分用）
+    uint32_t phase_timestamp_ms = 0;  // フェーズタイムスタンプ [ms]（Interruptループで更新）
 }t_mouse_motion_val;    //motion value
 
 typedef struct 
@@ -173,12 +183,55 @@ typedef struct
     float Kp = 0;   //proportional gain
     float Ki = 0;   //integral gain
     float Kd = 0;   //differential gain
+    float N = 0;    //filter coefficient
+    float diff = 0; //differential term filter
+    float D_operation_amount = 0; //differential operation amount
 }t_pid; //pid parameter
 
 typedef struct 
 {
-    float x_pos = 0;
-    float y_pos = 0;
+    // === センサベース推定位置（連続座標） ===
+    float x_pos = 0.0;          // 推定X座標 [m]
+    float y_pos = 0.0;          // 推定Y座標 [m]
+    float theta = 0.0;          // 推定姿勢角 [rad]
+    
+    // === セル基準位置（真値） ===
+    float x_cell_ref = 0.0;     // セル座標基準X位置 [m]
+    float y_cell_ref = 0.0;     // セル座標基準Y位置 [m]
+    float theta_cell_ref = 0.0; // セル座標基準姿勢角 [rad]
+    
+    // === リセット適用オドメトリ（セル補正後） ===
+    float x_pos_corrected = 0.0;    // セル補正後X座標 [m]
+    float y_pos_corrected = 0.0;    // セル補正後Y座標 [m]
+    float theta_corrected = 0.0;    // セル補正後姿勢角 [rad]
+    float x_error_corrected = 0.0;  // 補正後X誤差 [m]
+    float y_error_corrected = 0.0;  // 補正後Y誤差 [m]
+    float theta_error_corrected = 0.0;  // 補正後姿勢角誤差 [rad]
+    float position_error_corrected = 0.0; // 補正後位置誤差ノルム [m]
+    
+    // === 位置誤差（生センサオドメトリ） ===
+    float x_error = 0.0;        // X方向誤差 [m] (推定 - 真値)
+    float y_error = 0.0;        // Y方向誤差 [m]
+    float theta_error = 0.0;    // 姿勢角誤差 [rad]
+    float position_error = 0.0; // 位置誤差ノルム [m] (√(x_error² + y_error²))
+    
+    // === セル内相対位置（推定値） ===
+    float x_offset = 0.0;       // セル中心からのX方向オフセット [m]
+    float y_offset = 0.0;       // セル中心からのY方向オフセット [m]
+    
+    // === 速度情報 ===
+    float vel_x = 0.0;          // X方向速度 [m/s]
+    float vel_y = 0.0;          // Y方向速度 [m/s]
+    
+    // === 統計情報（誤差追跡用） ===
+    float max_position_error = 0.0;  // 最大位置誤差 [m]
+    float cumulative_error = 0.0;    // 累積誤差 [m]
+    uint32_t error_samples = 0;      // サンプル数
+    
+    // === 誤差推定（共分散） ===
+    float cov_xx = 0.1;         // X位置の分散
+    float cov_yy = 0.1;         // Y位置の分散
+    float cov_tt = 0.01;        // 角度の分散
 }t_odom;    //odometry data
 
 typedef struct 
@@ -187,6 +240,7 @@ typedef struct
     t_pid o;    //omega pid
     t_pid d;    //degree pid
     t_pid wall; //wall pid
+    t_pid pillar;  //pillar pid
     float Vatt = 0;
     float V_l = 0;
     float V_r = 0;
@@ -206,6 +260,21 @@ typedef struct
     int64_t start_search_time = 0;
     int64_t end_search_time = 0;
     int64_t delta_search_time = 0;
+    float diff = 0;
+    float D_operation_amount = 0;
+    
+    // 静止状態補償用変数
+    float static_friction_compensation_straight = 0.0;  // 静摩擦補償値（直進）
+    float static_friction_compensation_turn = 0.0;  // 静摩擦補償値（超信地旋回）
+    t_bool is_stationary = TRUE;  // 静止状態フラグ
+    float stationary_threshold_vel = 0.01;  // 静止判定閾値（速度） [m/s]
+    float stationary_threshold_ang_vel = 0.01;  // 静止判定閾値（角速度） [rad/s]
+    
+    // === オドメトリ補正トリガー用 ===
+    bool odom_correction_requested = false;  // 補正リクエストフラグ
+    int correction_cell_x = 0;  // 補正時のセルX座標
+    int correction_cell_y = 0;  // 補正時のセルY座標
+    int correction_dir = 0;     // 補正時の方向 (0=NORTH, 1=EAST, 2=SOUTH, 3=WEST)
 }t_control; //control parameter
 
 
@@ -228,8 +297,8 @@ typedef struct
 typedef struct 
 {
     t_pos pos;
-    t_wall wall[19][19];
-    unsigned char size[19][19] = {0};
+    t_wall wall[32][32];
+    unsigned char size[32][32] = {0};
     uint8_t GOAL_X = 0;
     uint8_t GOAL_Y = 0;
     t_search_mode flag;

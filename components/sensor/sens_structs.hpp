@@ -35,8 +35,12 @@ typedef struct
     t_sens_dir ref;  //sensor value reference
     t_sens_dir th_wall;  //wall threshold value
     t_sens_dir th_control;   //control threshold value
+    t_sens_dir th_pillar;    //pillar threshold value
+    t_sens_dir ref_pillar;    //pillar control threshold value
     t_wall_exist exist; //wall true or false
     t_wall_exist control_enable;  //control true or false
+    t_wall_exist pillar_detected;  //pillar detected flag
+    t_sens_dir pillar_error;  //pillar error value
     bool control;  //enable or disable
     t_sens_dir centor_front;  //center value
     t_sens_dir center_right;
@@ -55,6 +59,19 @@ typedef struct
 
 typedef struct 
 {
+    float x = 0.0;  // IMUのX方向オフセット [m]（前後方向）
+    float y = 0.0;  // IMUのY方向オフセット [m]（左右方向）
+    float z = 0.0;  // IMUのZ方向オフセット [m]（上下方向）
+}t_sensor_offset;
+
+typedef struct 
+{
+    float y_ref = 0.0;         // Y軸加速度のバイアス
+    t_sensor_offset offset;    // センサオフセット位置（回転中心からの距離）
+}t_accel;   //accelerometer data
+
+typedef struct 
+{
     unsigned int angle = 0;
     t_sens_dir data;
     t_sens_dir locate;
@@ -67,6 +84,7 @@ typedef struct
 {
     t_wall_sens wall;
     t_gyro gyro;
+    t_accel accel;
     t_enc enc;
     float BatteryVoltage = 4.0;
 }t_sens_data;   //sensor data
